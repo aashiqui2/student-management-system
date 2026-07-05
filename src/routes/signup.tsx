@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, Eye, EyeOff, Loader2, User, Shield, CheckCircle2, XCircle, ArrowRight, GraduationCap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export const Route = createFileRoute("/signup")({
@@ -20,6 +20,8 @@ function Signup() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -28,8 +30,7 @@ function Signup() {
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
   const [loading, setLoading] = useState(false);
-  
-  // Read active tab from query parameters if available
+
   const [activeTab, setActiveTab] = useState(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -42,29 +43,36 @@ function Signup() {
   const isBachelor = degree === "B.Sc" || degree === "BA" || degree === "B.Com";
   const ENGG_DEPARTMENTS = ["ECE", "EEE", "MECH", "CIVIL", "CSBS", "IT", "AIDS", "CSE"];
   const ARTS_SCIENCE_DEPARTMENTS = ["CS", "Physics", "Chemistry", "Mathematics", "Commerce", "English", "Economics"];
-  
-  const availableDepartments = isEngineering 
-    ? ENGG_DEPARTMENTS 
-    : isBachelor 
-      ? ARTS_SCIENCE_DEPARTMENTS 
+
+  const availableDepartments = isEngineering
+    ? ENGG_DEPARTMENTS
+    : isBachelor
+      ? ARTS_SCIENCE_DEPARTMENTS
       : [];
 
   useEffect(() => {
     if (department && availableDepartments.length > 0 && !availableDepartments.includes(department)) {
       setDepartment("");
     }
-  }, [degree]); // Only check when degree changes to avoid endless loops since availableDepartments is computed
+  }, [degree]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
     }
+
     setLoading(true);
-    
+
     const name = activeTab === "student" ? `${firstName} ${lastName}`.trim() : "";
-    
+
     if (activeTab === "student") {
       const start = parseInt(startYear);
       const end = parseInt(endYear);
@@ -80,21 +88,20 @@ function Signup() {
       const res = await fetch(`${API_BASE}/api/auth/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          username, 
-          password, 
+        body: JSON.stringify({
+          username,
+          password,
           roleType: activeTab,
-          ...(activeTab === "student" ? { name, email, department, degree, startYear: parseInt(startYear), endYear: parseInt(endYear) } : {}) 
+          ...(activeTab === "student" ? { name, email, department, degree, startYear: parseInt(startYear), endYear: parseInt(endYear) } : {})
         }),
       });
       if (!res.ok) {
         const text = await res.text();
         throw new Error(text || "Registration failed");
       }
-      const data = await res.json();
-      
+
       if (activeTab === "staff") {
-        toast.success("Account created! An administrator must promote your account to Staff in User Management before accessing the Staff Portal.");
+        toast.success("Account created! An administrator must approve your account.");
       } else {
         toast.success("Account created successfully! Please log in.");
       }
@@ -106,209 +113,357 @@ function Signup() {
     }
   };
 
-  const getPasswordStrength = (pass: string) => {
-    let score = 0;
-    if (!pass) return score;
-    if (pass.length > 8) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[a-z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-    return score;
-  };
+  const passwordRequirements = [
+    { met: password.length >= 8, text: "At least 8 characters" },
+    { met: /[A-Z]/.test(password), text: "One uppercase letter" },
+    { met: /[a-z]/.test(password), text: "One lowercase letter" },
+    { met: /[0-9]/.test(password), text: "One number" },
+    { met: /[^A-Za-z0-9]/.test(password), text: "One special character" },
+  ];
 
-  const strength = getPasswordStrength(password);
-  const strengthColor = strength <= 2 ? "bg-red-500" : strength <= 4 ? "bg-yellow-500" : "bg-green-500";
+  const strength = passwordRequirements.filter(r => r.met).length;
+  const strengthColor = strength <= 2 ? "bg-red-500" : strength <= 4 ? "bg-amber-500" : "bg-emerald-500";
+  const strengthBgColor = strength <= 2 ? "bg-red-500/10" : strength <= 4 ? "bg-amber-500/10" : "bg-emerald-500/10";
   const strengthLabel = strength <= 2 ? "Weak" : strength <= 4 ? "Medium" : "Strong";
 
+  const passwordsMatch = password && confirmPassword && password === confirmPassword;
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 p-4">
-      <div className="w-full max-w-md space-y-6 rounded-xl bg-background p-8 shadow-lg ring-1 ring-border/50">
-        <div className="text-center">
-          <h2 className="text-3xl font-bold tracking-tight">Create an account</h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Join EduTrack to access your records
-          </p>
-        </div>
+    <div className="min-h-screen flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-indigo-600 via-purple-700 to-indigo-800 relative overflow-hidden">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMiIvPjwvZz48L2c+PC9zdmc+')] opacity-30"></div>
+        <div className="absolute top-1/3 left-1/3 w-96 h-96 bg-purple-400/20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl"></div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="student">Student Signup</TabsTrigger>
-            <TabsTrigger value="staff">Staff Registration</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="student" className="mt-2 space-y-4">
-            <div className="text-sm text-muted-foreground text-center mt-2">
-              Sign up as a Student. Accounts will immediately have Student access.
+        <div className="relative z-10 flex flex-col justify-center px-12 xl:px-20">
+          <div className="flex items-center gap-3 mb-8">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-md border border-white/20">
+              <GraduationCap className="h-7 w-7 text-white" />
             </div>
-          </TabsContent>
-          
-          <TabsContent value="staff" className="mt-2 space-y-4">
-            <div className="rounded-lg bg-amber-50 p-3 text-xs text-amber-800 border border-amber-200 mt-2 flex gap-2.5 items-start">
-              <ShieldAlert className="h-4 w-4 shrink-0 text-amber-600 mt-0.5" />
-              <div>
-                <span className="font-semibold">Notice</span>: All staff signups are registered with basic student privileges initially. An Admin must change your role to **Staff** in User Management to enable Staff tools.
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
-
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="username">{activeTab === "student" ? "Registration Number" : "Username"}</Label>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                required
-                placeholder={activeTab === "student" ? "e.g. 2022CS01" : "e.g. jsmith_staff"}
-              />
-            </div>
-
-            {activeTab === "student" && (
-              <>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input
-                      id="firstName"
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      required
-                      placeholder="John"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input
-                      id="lastName"
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      required
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="e.g. john.doe@school.com"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="degree">Stream</Label>
-                    <Select value={degree} onValueChange={setDegree} required>
-                      <SelectTrigger id="degree">
-                        <SelectValue placeholder="Select Stream" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="BE">BE</SelectItem>
-                        <SelectItem value="B.Tech">B.Tech</SelectItem>
-                        <SelectItem value="B.Sc">B.Sc</SelectItem>
-                        <SelectItem value="BA">BA</SelectItem>
-                        <SelectItem value="B.Com">B.Com</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="department">Specialization</Label>
-                    <Select value={department} onValueChange={setDepartment} required disabled={!degree}>
-                      <SelectTrigger id="department">
-                        <SelectValue placeholder={degree ? "Select Specialization" : "Select Stream First"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableDepartments.map((dept) => (
-                          <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="startYear">Start Year</Label>
-                    <Select value={startYear} onValueChange={setStartYear} required>
-                      <SelectTrigger id="startYear">
-                        <SelectValue placeholder="Start Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 13 }, (_, i) => String(2018 + i)).map(year => (
-                          <SelectItem key={year} value={year}>{year}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="endYear">End Year</Label>
-                    <Select value={endYear} onValueChange={setEndYear} required>
-                      <SelectTrigger id="endYear">
-                        <SelectValue placeholder="End Year" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: 13 }, (_, i) => String(2018 + i)).map(year => (
-                          <SelectItem key={year} value={year}>{year}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              </>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              {password && (
-                <div className="mt-2 flex items-center space-x-2">
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div 
-                      className={`h-full transition-all duration-300 ${strengthColor}`} 
-                      style={{ width: `${(Math.min(strength, 5) / 5) * 100}%` }}
-                    />
-                  </div>
-                  <span className="text-xs text-muted-foreground w-12 text-right">{strengthLabel}</span>
-                </div>
-              )}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-            </div>
+            <span className="text-3xl font-bold text-white tracking-tight">EduTrack</span>
           </div>
 
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Creating account..." : `Sign up as ${activeTab === "student" ? "Student" : "Staff"}`}
-          </Button>
-        </form>
+          <h1 className="text-4xl xl:text-5xl font-bold text-white leading-tight mb-6">
+            Start Your<br />
+            <span className="text-purple-200">Educational Journey</span>
+          </h1>
 
-        <p className="text-center text-sm text-muted-foreground pt-2 border-t border-border/50">
-          Already have an account?{" "}
-          <Link 
-            to="/login" 
-            search={{ type: activeTab }} 
-            className="font-medium text-primary hover:underline"
-          >
-            Sign in
-          </Link>
-        </p>
+          <p className="text-lg text-indigo-100 max-w-md">
+            Join thousands of students and educators managing academic success with EduTrack.
+          </p>
+
+          <div className="mt-12 space-y-4">
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <span className="text-sm">Instant access to your academic records</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <span className="text-sm">Track assessments and performance</span>
+            </div>
+            <div className="flex items-center gap-3 text-white/90">
+              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+              <span className="text-sm">Secure and private data management</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Signup Form */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-slate-50">
+        <div className="w-full max-w-lg">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600">
+              <GraduationCap className="h-6 w-6 text-white" />
+            </div>
+            <span className="text-2xl font-bold text-slate-800">EduTrack</span>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 overflow-hidden">
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <h2 className="text-2xl font-bold text-slate-900">Create your account</h2>
+                <p className="mt-2 text-sm text-slate-500">
+                  Join EduTrack to manage your academic journey
+                </p>
+              </div>
+
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2 bg-slate-100 h-auto p-1 rounded-xl">
+                  <TabsTrigger
+                    value="student"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 rounded-lg py-2.5 text-sm font-medium transition-all flex items-center gap-2"
+                  >
+                    <User className="h-4 w-4" />
+                    Student
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="staff"
+                    className="data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:text-indigo-600 rounded-lg py-2.5 text-sm font-medium transition-all flex items-center gap-2"
+                  >
+                    <Shield className="h-4 w-4" />
+                    Staff
+                  </TabsTrigger>
+                </TabsList>
+
+                {activeTab === "staff" && (
+                  <div className="mt-4 rounded-xl bg-amber-50 border border-amber-200 p-4 flex gap-3">
+                    <ShieldAlert className="h-5 w-5 shrink-0 text-amber-600" />
+                    <p className="text-xs text-amber-800">
+                      <span className="font-semibold">Notice:</span> Staff accounts require admin approval before accessing staff tools.
+                    </p>
+                  </div>
+                )}
+              </Tabs>
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="username" className="text-sm font-medium text-slate-700">
+                      {activeTab === "student" ? "Registration Number" : "Username"}
+                    </Label>
+                    <Input
+                      id="username"
+                      value={username}
+                      onChange={(e) => setUsername(e.target.value)}
+                      required
+                      className="h-11 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 transition-all"
+                      placeholder={activeTab === "student" ? "e.g. 2022CS01" : "e.g. jsmith_staff"}
+                    />
+                  </div>
+
+                  {activeTab === "student" && (
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="firstName" className="text-sm font-medium text-slate-700">First Name</Label>
+                          <Input
+                            id="firstName"
+                            value={firstName}
+                            onChange={(e) => setFirstName(e.target.value)}
+                            required
+                            className="h-11 bg-slate-50 border-slate-200"
+                            placeholder="John"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="lastName" className="text-sm font-medium text-slate-700">Last Name</Label>
+                          <Input
+                            id="lastName"
+                            value={lastName}
+                            onChange={(e) => setLastName(e.target.value)}
+                            required
+                            className="h-11 bg-slate-50 border-slate-200"
+                            placeholder="Doe"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="text-sm font-medium text-slate-700">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                          className="h-11 bg-slate-50 border-slate-200"
+                          placeholder="john.doe@school.com"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="degree" className="text-sm font-medium text-slate-700">Stream</Label>
+                          <Select value={degree} onValueChange={setDegree} required>
+                            <SelectTrigger id="degree" className="h-11 bg-slate-50 border-slate-200">
+                              <SelectValue placeholder="Select Stream" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="BE">BE</SelectItem>
+                              <SelectItem value="B.Tech">B.Tech</SelectItem>
+                              <SelectItem value="B.Sc">B.Sc</SelectItem>
+                              <SelectItem value="BA">BA</SelectItem>
+                              <SelectItem value="B.Com">B.Com</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="department" className="text-sm font-medium text-slate-700">Specialization</Label>
+                          <Select value={department} onValueChange={setDepartment} required disabled={!degree}>
+                            <SelectTrigger id="department" className="h-11 bg-slate-50 border-slate-200">
+                              <SelectValue placeholder={degree ? "Select..." : "Choose stream"} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableDepartments.map((dept) => (
+                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="startYear" className="text-sm font-medium text-slate-700">Start Year</Label>
+                          <Select value={startYear} onValueChange={setStartYear} required>
+                            <SelectTrigger id="startYear" className="h-11 bg-slate-50 border-slate-200">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 13 }, (_, i) => String(2018 + i)).map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="endYear" className="text-sm font-medium text-slate-700">End Year</Label>
+                          <Select value={endYear} onValueChange={setEndYear} required>
+                            <SelectTrigger id="endYear" className="h-11 bg-slate-50 border-slate-200">
+                              <SelectValue placeholder="Select" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: 13 }, (_, i) => String(2018 + i)).map(year => (
+                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div className="space-y-2">
+                    <Label htmlFor="password" className="text-sm font-medium text-slate-700">Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        type={showPassword ? "text" : "password"}
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="h-11 pr-11 bg-slate-50 border-slate-200 focus:border-indigo-500 transition-all"
+                        placeholder="Create a password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                    </div>
+
+                    {password && (
+                      <div className="space-y-3 pt-1">
+                        <div className="flex items-center gap-3">
+                          <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full transition-all duration-300 ${strengthColor}`}
+                              style={{ width: `${(strength / 5) * 100}%` }}
+                            />
+                          </div>
+                          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${strengthBgColor} ${strength <= 2 ? 'text-red-600' : strength <= 4 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                            {strengthLabel}
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                          {passwordRequirements.map((req, i) => (
+                            <div key={i} className="flex items-center gap-1.5 text-xs">
+                              {req.met ? (
+                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                              ) : (
+                                <XCircle className="h-3.5 w-3.5 text-slate-300" />
+                              )}
+                              <span className={req.met ? "text-slate-600" : "text-slate-400"}>
+                                {req.text}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword" className="text-sm font-medium text-slate-700">Confirm Password</Label>
+                    <div className="relative">
+                      <Input
+                        id="confirmPassword"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        required
+                        className={`h-11 pr-11 bg-slate-50 border-slate-200 transition-all ${confirmPassword ? (passwordsMatch ? 'border-emerald-500 focus:border-emerald-500' : 'border-red-400 focus:border-red-400') : ''}`}
+                        placeholder="Confirm your password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                      </button>
+                      {confirmPassword && (
+                        <div className="absolute right-10 top-1/2 -translate-y-1/2">
+                          {passwordsMatch ? (
+                            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                          ) : (
+                            <XCircle className="h-5 w-5 text-red-400" />
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    {confirmPassword && !passwordsMatch && (
+                      <p className="text-xs text-red-500">Passwords do not match</p>
+                    )}
+                  </div>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-medium shadow-lg shadow-indigo-500/25 transition-all"
+                  disabled={loading}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating account...
+                    </>
+                  ) : (
+                    <>
+                      Create account
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+
+            <div className="px-8 py-5 bg-slate-50/50 border-t border-slate-100">
+              <p className="text-center text-sm text-slate-600">
+                Already have an account?{" "}
+                <Link
+                  to="/login"
+                  search={{ type: activeTab }}
+                  className="font-semibold text-indigo-600 hover:text-indigo-700 transition-colors"
+                >
+                  Sign in
+                </Link>
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
