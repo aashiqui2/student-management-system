@@ -23,7 +23,8 @@ export interface Student {
   email: string;
   mobileNumber?: string;
   department?: string;
-  degree?: string;
+  stream?: string;
+  specialization?: string;
   pursuingYear?: PursuingYear | "";
   hackerRankUsername?: string;
   linkedInUrl?: string;
@@ -76,6 +77,8 @@ function toStudent(student: StudentApi): Student {
     email: student.email,
     mobileNumber: student.mobileNumber ?? "",
     department: student.department ?? "",
+    stream: student.stream ?? "",
+    specialization: student.specialization ?? "",
     pursuingYear: (student.pursuingYear as PursuingYear) ?? "",
     hackerRankUsername: student.hackerRankUsername ?? "",
     linkedInUrl: student.linkedInUrl ?? "",
@@ -109,6 +112,8 @@ function toStudentCreatePayload(student: Omit<Student, "id">): StudentCreatePayl
     email: student.email,
     mobileNumber: student.mobileNumber || undefined,
     department: student.department || undefined,
+    stream: student.stream || undefined,
+    specialization: student.specialization || undefined,
     pursuingYear: student.pursuingYear || undefined,
     hackerRankUsername: student.hackerRankUsername || undefined,
     startYear: student.startYear ? Number(student.startYear) : undefined,

@@ -10,9 +10,8 @@ import {
 } from "@/lib/sms-data";
 import { useAuth } from "@/lib/auth";
 
-const ENGG_DEPARTMENTS = ["ECE", "EEE", "MECH", "CIVIL", "CSBS", "IT", "AIDS", "CSE"];
-const ARTS_SCIENCE_DEPARTMENTS = ["CS", "Physics", "Chemistry", "Mathematics", "Commerce", "English", "Economics"];
-const DEGREES = ["BE", "B.Tech", "B.Sc", "BA", "B.Com"];
+const STREAMS = ["B.Tech", "M.Tech", "B.Sc", "M.Sc"];
+const SPECIALIZATIONS = ["CSE", "IT", "ECE", "AIDS", "CSBS", "Cybersecurity"];
 const SECTIONS = ["A", "B", "C", "D"];
 const YEAR_OPTIONS = Array.from({ length: 2030 - 2018 + 1 }, (_, index) => String(2018 + index));
 import { Card, CardContent } from "@/components/ui/card";
@@ -29,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 type FormValues = Omit<Student, "id">;
 
@@ -75,25 +75,17 @@ export function StudentForm({ id }: { id?: string }) {
 
   const pursuingYear = watch("pursuingYear");
   const department = watch("department");
-  const degree = watch("degree");
+  const stream = watch("stream");
+  const specialization = watch("specialization");
   const startYear = watch("startYear");
   const endYear = watch("endYear");
 
-  const isEngineering = degree === "BE" || degree === "B.Tech";
-  const isBachelor = degree === "B.Sc" || degree === "BA" || degree === "B.Com";
-  
-  const availableDepartments = isEngineering 
-    ? ENGG_DEPARTMENTS 
-    : isBachelor 
-      ? ARTS_SCIENCE_DEPARTMENTS 
-      : [];
-
-  // Reset department if the available options change and current isn't valid
+  // Reset specialization if the stream changes
   useEffect(() => {
-    if (department && availableDepartments.length > 0 && !availableDepartments.includes(department)) {
-      setValue("department", "");
+    if (specialization && !stream) {
+      setValue("specialization", "");
     }
-  }, [availableDepartments, department, setValue]);
+  }, [stream, specialization, setValue]);
 
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
@@ -109,13 +101,13 @@ export function StudentForm({ id }: { id?: string }) {
   const onSubmit = async (data: FormValues) => {
     const start = Number(data.startYear);
     const end = Number(data.endYear);
-    const expectedDuration = (data.degree === "BE" || data.degree === "B.Tech") ? 4 : 3;
+    const expectedDuration = (data.stream === "B.Tech") ? 4 : 3;
 
     if (data.startYear && data.endYear) {
       if (end - start !== expectedDuration) {
         setError("endYear", {
           type: "validate",
-          message: `For ${data.degree}, graduation must be exactly ${expectedDuration} years after Start Year.`,
+          message: `For ${data.stream}, graduation must be exactly ${expectedDuration} years after Start Year.`,
         });
         return;
       }
@@ -143,6 +135,121 @@ export function StudentForm({ id }: { id?: string }) {
       );
     }
   };
+
+  const DEPARTMENTS = [
+    {
+      label: "Engineering",
+      options: [
+        { label: "Computer Science and Engineering (CSE)", value: "CSE" },
+        { label: "Information Technology (IT)", value: "IT" },
+        { label: "Artificial Intelligence and Machine Learning (AI & ML)", value: "AI & ML" },
+        { label: "Artificial Intelligence and Data Science (AI & DS)", value: "AI & DS" },
+        { label: "Computer Science and Business Systems (CSBS)", value: "CSBS" },
+        { label: "Computer Engineering", value: "Computer Engineering" },
+        { label: "Cyber Security", value: "Cyber Security" },
+        { label: "Data Science", value: "Data Science" },
+        { label: "Internet of Things (IoT)", value: "IoT" },
+        { label: "Robotics and Artificial Intelligence", value: "Robotics and AI" },
+        { label: "Software Engineering", value: "Software Engineering" },
+        { label: "Cloud Computing", value: "Cloud Computing" },
+        { label: "Blockchain Technology", value: "Blockchain Technology" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Arts & Science",
+      options: [
+        { label: "B.Sc Computer Science", value: "B.Sc CS" },
+        { label: "B.Sc Information Technology", value: "B.Sc IT" },
+        { label: "B.Sc Artificial Intelligence", value: "B.Sc AI" },
+        { label: "B.Sc Artificial Intelligence and Machine Learning", value: "B.Sc AI & ML" },
+        { label: "B.Sc Data Science", value: "B.Sc Data Science" },
+        { label: "B.Sc Cyber Security", value: "B.Sc Cyber Security" },
+        { label: "B.Sc Computer Technology", value: "B.Sc Computer Technology" },
+        { label: "B.Sc Software Systems", value: "B.Sc Software Systems" },
+        { label: "B.Sc Computer Applications", value: "B.Sc Computer Applications" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    }
+  ];
+
+  const SPECIALIZATIONS_GROUPS = [
+    { label: "General", value: "General" },
+    { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+    { label: "Machine Learning", value: "Machine Learning" },
+    { label: "Artificial Intelligence & Machine Learning", value: "Artificial Intelligence & Machine Learning" },
+    { label: "Data Science", value: "Data Science" },
+    { label: "Cyber Security", value: "Cyber Security" },
+    { label: "Information Security", value: "Information Security" },
+    { label: "Ethical Hacking", value: "Ethical Hacking" },
+    { label: "Cloud Computing", value: "Cloud Computing" },
+    { label: "DevOps", value: "DevOps" },
+    { label: "Internet of Things (IoT)", value: "IoT" },
+    { label: "Blockchain", value: "Blockchain" },
+    { label: "Full Stack Development", value: "Full Stack Development" },
+    { label: "Software Engineering", value: "Software Engineering" },
+    { label: "Mobile Application Development", value: "Mobile Application Development" },
+    { label: "Web Development", value: "Web Development" },
+    { label: "Computer Networks", value: "Computer Networks" },
+    { label: "Network Security", value: "Network Security" },
+    { label: "Database Management", value: "Database Management" },
+    { label: "Computer Vision", value: "Computer Vision" },
+    { label: "Natural Language Processing (NLP)", value: "NLP" },
+    { label: "Robotics", value: "Robotics" },
+    { label: "Embedded Systems", value: "Embedded Systems" },
+    { label: "Big Data Analytics", value: "Big Data Analytics" },
+    { label: "Game Development", value: "Game Development" },
+    { label: "AR/VR", value: "AR/VR" },
+    { label: "Quantum Computing", value: "Quantum Computing" }
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
+  const STREAMS_GROUPS = [
+    {
+      label: "Engineering",
+      options: [
+        { label: "B.E.", value: "B.E." },
+        { label: "B.Tech.", value: "B.Tech." }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Arts & Science",
+      options: [
+        { label: "B.Sc", value: "B.Sc" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Commerce",
+      options: [
+        { label: "B.Com", value: "B.Com" },
+        { label: "B.Com Computer Applications", value: "B.Com Computer Applications" },
+        { label: "B.Com Information Systems", value: "B.Com Information Systems" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Management",
+      options: [
+        { label: "BBA", value: "BBA" },
+        { label: "BBA Computer Applications", value: "BBA Computer Applications" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Postgraduate",
+      options: [
+        { label: "M.E.", value: "M.E." },
+        { label: "M.Tech.", value: "M.Tech." },
+        { label: "MCA", value: "MCA" },
+        { label: "M.Sc", value: "M.Sc" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Diploma",
+      options: [
+        { label: "Diploma in Computer Engineering", value: "Diploma in Computer Engineering" },
+        { label: "Diploma in Information Technology", value: "Diploma in Information Technology" },
+        { label: "Diploma in AI & ML", value: "Diploma in AI & ML" },
+        { label: "Diploma in Cyber Security", value: "Diploma in Cyber Security" },
+        { label: "Diploma in Data Science", value: "Diploma in Data Science" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    }
+  ];
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -201,47 +308,36 @@ export function StudentForm({ id }: { id?: string }) {
             <section>
               <h2 className="mb-1 text-lg font-bold text-primary">Academic Details</h2>
               <Separator className="mb-5" />
-              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
-                <Field label="Stream" error={errors.degree?.message}>
-                  <Select
-                    value={degree || ""}
-                    onValueChange={(v) =>
-                      setValue("degree", v as FormValues["degree"])
-                    }
-                    disabled={isStudent}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select stream" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {DEGREES.map((deg) => (
-                        <SelectItem key={deg} value={deg}>
-                          {deg}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-                <Field label="Specialization (Department)" error={errors.department?.message}>
-                  <Select
+              <div className="grid grid-cols-1 gap-5">
+                <Field label="Department" error={errors.department?.message}>
+                  <SearchableSelect
+                    groups={DEPARTMENTS}
                     value={department || ""}
-                    onValueChange={(v) =>
-                      setValue("department", v as FormValues["department"])
-                    }
-                    disabled={isStudent || !degree}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder={degree ? "Select specialization" : "Select stream first"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableDepartments.map((dept) => (
-                        <SelectItem key={dept} value={dept}>
-                          {dept}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.department?.message && <p className="text-xs text-destructive">{errors.department.message}</p>}
+                    onValueChange={(v) => setValue("department", v as FormValues["department"])}
+                    disabled={isStudent}
+                    placeholder="Select Department"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mt-5">
+                <Field label="Stream" error={errors.stream?.message}>
+                  <SearchableSelect
+                    groups={STREAMS_GROUPS}
+                    value={stream || ""}
+                    onValueChange={(v) => setValue("stream", v as FormValues["stream"])}
+                    disabled={isStudent}
+                    placeholder="Select Stream"
+                  />
+                </Field>
+                <Field label="Specialization" error={errors.specialization?.message}>
+                  <SearchableSelect
+                    options={SPECIALIZATIONS_GROUPS}
+                    value={specialization || ""}
+                    onValueChange={(v) => setValue("specialization", v as FormValues["specialization"])}
+                    disabled={isStudent || !stream}
+                    placeholder="Select Specialization"
+                  />
+                  {errors.specialization?.message && <p className="text-xs text-destructive">{errors.specialization.message}</p>}
                 </Field>
                 <Field label="Start Year" error={errors.startYear?.message}>
                   <Select

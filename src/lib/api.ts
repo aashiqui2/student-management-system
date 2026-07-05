@@ -45,6 +45,23 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+export interface UserDto {
+  userId: number;
+  username: string;
+  role: string;
+  enabled: boolean;
+  fullName: string;
+  regNo: string;
+  stream: string;
+  department: string;
+  specialization: string;
+  pursuingYear?: string | null;
+  hackerRankUsername?: string;
+  startYear?: number | null;
+  endYear?: number | null;
+  linkedInUrl?: string;
+}
+
 export type StudentApi = {
   id: number;
   name: string;
@@ -52,7 +69,8 @@ export type StudentApi = {
   email: string;
   mobileNumber?: string;
   department?: string;
-  degree?: string;
+  stream?: string;
+  specialization?: string;
   pursuingYear?: string | null;
   hackerRankUsername?: string;
   startYear?: number | null;
@@ -113,6 +131,7 @@ export type StaffProfileApi = {
   mobileNumber?: string;
   linkedInUrl?: string;
   department?: string;
+  stream?: string;
   specialization?: string;
   profilePhotoUrl?: string;
   designation?: DesignationApi;

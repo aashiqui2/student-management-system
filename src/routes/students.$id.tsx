@@ -138,7 +138,10 @@ function StudentProfile() {
               )}
               <div className="flex items-center gap-3 text-muted-foreground">
                 <Building2 className="h-4 w-4" />{" "}
-                <span>{student.department || "N/A"}</span>
+                <span>
+                  {student.department ? `${student.department} - ` : ""}
+                  {student.stream || "N/A"} - {student.specialization || "N/A"}
+                </span>
               </div>
               {student.pursuingYear && (
                 <div className="flex items-center gap-3 text-muted-foreground">

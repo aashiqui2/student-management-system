@@ -203,6 +203,8 @@ function StudentList() {
                     <th className="px-5 py-3 font-semibold">Student</th>
                     <th className="px-5 py-3 font-semibold">Reg No</th>
                     <th className="px-5 py-3 font-semibold">Department</th>
+                    <th className="px-5 py-3 font-semibold">Stream</th>
+                    <th className="px-5 py-3 font-semibold">Specialization</th>
                     <th className="px-5 py-3 font-semibold">Year</th>
                     <th className="px-5 py-3 text-center font-semibold">Category</th>
                     {isAdmin && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
@@ -249,6 +251,16 @@ function StudentList() {
                       <td className="px-5 py-3">
                         <Badge variant="secondary">
                           {s.department ? s.department : "N/A"}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3">
+                        <Badge variant="secondary">
+                          {s.stream ? s.stream : "N/A"}
+                        </Badge>
+                      </td>
+                      <td className="px-5 py-3">
+                        <Badge variant="secondary">
+                          {s.specialization ? s.specialization : "N/A"}
                         </Badge>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">

@@ -58,7 +58,8 @@ export async function parseStudents(file: File): Promise<StudentRow[]> {
     if (!name && !regNo) continue;
     
     const email = str(pick(row, ["email", "email address"]));
-    const department = str(pick(row, ["department", "dept"]));
+    const stream = str(pick(row, ["stream", "department", "dept"]));
+    const specialization = str(pick(row, ["specialization", "spec", "branch"]));
     const pursuingYearRaw = pick(row, ["pursuingyear", "pursuing year", "year"]);
     
     // Normalize pursuing year - handle "Fourth Year", "fourth year", etc.
@@ -73,7 +74,8 @@ export async function parseStudents(file: File): Promise<StudentRow[]> {
       regNo,
       email,
       mobileNumber: str(pick(row, ["mobilenumber", "mobile number", "mobile", "phone"])),
-      department,
+      stream,
+      specialization,
       pursuingYear: normalizedPursuingYear,
       hackerRankUsername: str(pick(row, ["hackerrankusername", "hackerrank username", "hackerrank"])),
       linkedInUrl: str(pick(row, ["linkedinurl", "linkedin url", "linkedin"])),
@@ -111,7 +113,8 @@ export function downloadStudentTemplate() {
     "regNo",
     "email",
     "mobileNumber",
-    "department",
+    "stream",
+    "specialization",
     "pursuingYear",
     "hackerRankUsername",
     "linkedInUrl",
@@ -126,7 +129,8 @@ export function downloadStudentTemplate() {
       regNo: "21CSE100",
       email: "jane.doe@college.edu",
       mobileNumber: "9876500000",
-      department: "CSE",
+      stream: "BE",
+      specialization: "CSE",
       pursuingYear: "3rd Year",
       hackerRankUsername: "jane_d",
       linkedInUrl: "https://linkedin.com/in/janedoe",

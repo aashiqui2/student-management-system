@@ -258,6 +258,8 @@ function MarksEntry() {
                       <th className="px-5 py-3 font-semibold">Student</th>
                       <th className="px-5 py-3 font-semibold">Reg No</th>
                       <th className="px-5 py-3 font-semibold">Department</th>
+                      <th className="px-5 py-3 font-semibold">Stream</th>
+                      <th className="px-5 py-3 font-semibold">Specialization</th>
                       <th className="px-5 py-3 font-semibold">Marks Scored</th>
                     </tr>
                   </thead>
@@ -277,6 +279,12 @@ function MarksEntry() {
                         <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
                         <td className="px-5 py-3">
                           <Badge variant="secondary">{s.department || "N/A"}</Badge>
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge variant="secondary">{s.stream || "N/A"}</Badge>
+                        </td>
+                        <td className="px-5 py-3">
+                          <Badge variant="secondary">{s.specialization || "N/A"}</Badge>
                         </td>
                         <td className="px-5 py-3">
                           <Input

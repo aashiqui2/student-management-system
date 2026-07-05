@@ -36,7 +36,7 @@ type StaffProfile = {
   email: string;
   mobileNumber?: string;
   linkedInUrl?: string;
-  department?: string;
+  stream?: string;
   specialization?: string;
   profilePhotoUrl?: string;
   designation?: DesignationApi;
@@ -227,7 +227,7 @@ function StaffManagement() {
                     <th className="px-4 py-3 font-semibold w-[120px]">Staff ID</th>
                     <th className="px-4 py-3 font-semibold">Name</th>
                     <th className="px-4 py-3 font-semibold">Email</th>
-                    <th className="px-4 py-3 font-semibold">Department</th>
+                    <th className="px-4 py-3 font-semibold">Stream</th>
                     <th className="px-4 py-3 font-semibold">Status</th>
                     <th className="px-4 py-3 font-semibold">Created Date</th>
                     <th className="px-4 py-3 font-semibold text-center">Actions</th>
@@ -268,10 +268,10 @@ function StaffManagement() {
                         {staff.email || <span className="text-xs text-muted-foreground">—</span>}
                       </td>
 
-                      {/* Department */}
+                      {/* Stream */}
                       <td className="px-4 py-3">
-                        {staff.department ? (
-                          <Badge variant="outline">{staff.department}</Badge>
+                        {staff.stream ? (
+                          <Badge variant="outline">{staff.stream}</Badge>
                         ) : (
                           <span className="text-xs text-muted-foreground">—</span>
                         )}
@@ -387,14 +387,21 @@ function StaffManagement() {
             </div>
 
             <div>
-              <Label htmlFor="department">Department</Label>
-              <Input
-                id="department"
-                value={formData.department || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, department: e.target.value })
-                }
-              />
+              <Label htmlFor="stream">Stream</Label>
+              <Select
+                value={formData.stream || ""}
+                onValueChange={(val) => setFormData({ ...formData, stream: val, specialization: "" })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="B.Tech">B.Tech</SelectItem>
+                  <SelectItem value="M.Tech">M.Tech</SelectItem>
+                  <SelectItem value="B.Sc">B.Sc</SelectItem>
+                  <SelectItem value="M.Sc">M.Sc</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>
@@ -421,14 +428,23 @@ function StaffManagement() {
 
             <div>
               <Label htmlFor="specialization">Specialization</Label>
-              <Input
-                id="specialization"
-                placeholder="e.g., Full Stack, Data Science, Networking, DevOps"
+              <Select
                 value={formData.specialization || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, specialization: e.target.value })
-                }
-              />
+                onValueChange={(val) => setFormData({ ...formData, specialization: val })}
+                disabled={!formData.stream}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Specialization" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="CSE">CSE (Computer Science)</SelectItem>
+                  <SelectItem value="IT">IT (Information Technology)</SelectItem>
+                  <SelectItem value="ECE">ECE (Electronics & Communication)</SelectItem>
+                  <SelectItem value="AIDS">AIDS (AI & Data Science)</SelectItem>
+                  <SelectItem value="CSBS">CSBS (Computer Science & Business)</SelectItem>
+                  <SelectItem value="Cybersecurity">Cybersecurity</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div>

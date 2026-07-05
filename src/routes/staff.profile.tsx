@@ -294,8 +294,13 @@ function StaffProfilePage() {
                 </span>
               )}
               {profile.department && (
-                <span className="bg-white/10 px-3 py-1 rounded-full text-xs font-semibold">
+                <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1 rounded-full text-xs font-semibold">
                   {profile.department}
+                </span>
+              )}
+              {profile.stream && (
+                <span className="bg-white/10 px-3 py-1 rounded-full text-xs font-semibold">
+                  {profile.stream}
                 </span>
               )}
             </div>
@@ -482,6 +487,16 @@ function StaffProfilePage() {
                 id="department"
                 disabled
                 value={profile.department || "Not assigned"}
+                className="mt-1.5 bg-muted/50"
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="stream">Stream (Read Only)</Label>
+              <Input
+                id="stream"
+                disabled
+                value={profile.stream || "Not assigned"}
                 className="mt-1.5 bg-muted/50"
               />
             </div>

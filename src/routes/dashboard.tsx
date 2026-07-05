@@ -280,7 +280,8 @@ function Dashboard() {
                   <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm">
                     <tr className="border-b border-slate-100 text-left text-slate-600">
                       <th className="px-6 py-4 font-semibold">Student</th>
-                      <th className="px-6 py-4 font-semibold">Department</th>
+                      <th className="px-6 py-4 font-semibold">Stream</th>
+                      <th className="px-6 py-4 font-semibold">Specialization</th>
                       <th className="px-6 py-4 font-semibold">Reg No</th>
                       <th className="px-6 py-4 font-semibold">Performance</th>
                       <th className="px-6 py-4 text-center font-semibold">Category</th>
@@ -313,7 +314,12 @@ function Dashboard() {
                         </td>
                         <td className="px-6 py-4">
                           <Badge variant="outline" className="font-medium border-slate-200 bg-slate-50">
-                            {s.department || "N/A"}
+                            {s.stream || "N/A"}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="outline" className="font-medium border-slate-200 bg-slate-50">
+                            {s.specialization || "N/A"}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">

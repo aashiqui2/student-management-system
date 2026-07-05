@@ -9,6 +9,7 @@ import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ShieldAlert, Eye, EyeOff, Loader2, User, Shield, CheckCircle2, XCircle, ArrowRight, GraduationCap } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 
 export const Route = createFileRoute("/signup")({
   component: Signup,
@@ -26,7 +27,8 @@ function Signup() {
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [department, setDepartment] = useState("");
-  const [degree, setDegree] = useState("");
+  const [specialization, setSpecialization] = useState("");
+  const [stream, setStream] = useState("");
   const [startYear, setStartYear] = useState("");
   const [endYear, setEndYear] = useState("");
   const [loading, setLoading] = useState(false);
@@ -39,22 +41,122 @@ function Signup() {
     return "student";
   });
 
-  const isEngineering = degree === "BE" || degree === "B.Tech";
-  const isBachelor = degree === "B.Sc" || degree === "BA" || degree === "B.Com";
-  const ENGG_DEPARTMENTS = ["ECE", "EEE", "MECH", "CIVIL", "CSBS", "IT", "AIDS", "CSE"];
-  const ARTS_SCIENCE_DEPARTMENTS = ["CS", "Physics", "Chemistry", "Mathematics", "Commerce", "English", "Economics"];
-
-  const availableDepartments = isEngineering
-    ? ENGG_DEPARTMENTS
-    : isBachelor
-      ? ARTS_SCIENCE_DEPARTMENTS
-      : [];
-
-  useEffect(() => {
-    if (department && availableDepartments.length > 0 && !availableDepartments.includes(department)) {
-      setDepartment("");
+  const DEPARTMENTS = [
+    {
+      label: "Engineering",
+      options: [
+        { label: "Computer Science and Engineering (CSE)", value: "CSE" },
+        { label: "Information Technology (IT)", value: "IT" },
+        { label: "Artificial Intelligence and Machine Learning (AI & ML)", value: "AI & ML" },
+        { label: "Artificial Intelligence and Data Science (AI & DS)", value: "AI & DS" },
+        { label: "Computer Science and Business Systems (CSBS)", value: "CSBS" },
+        { label: "Computer Engineering", value: "Computer Engineering" },
+        { label: "Cyber Security", value: "Cyber Security" },
+        { label: "Data Science", value: "Data Science" },
+        { label: "Internet of Things (IoT)", value: "IoT" },
+        { label: "Robotics and Artificial Intelligence", value: "Robotics and AI" },
+        { label: "Software Engineering", value: "Software Engineering" },
+        { label: "Cloud Computing", value: "Cloud Computing" },
+        { label: "Blockchain Technology", value: "Blockchain Technology" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Arts & Science",
+      options: [
+        { label: "B.Sc Computer Science", value: "B.Sc CS" },
+        { label: "B.Sc Information Technology", value: "B.Sc IT" },
+        { label: "B.Sc Artificial Intelligence", value: "B.Sc AI" },
+        { label: "B.Sc Artificial Intelligence and Machine Learning", value: "B.Sc AI & ML" },
+        { label: "B.Sc Data Science", value: "B.Sc Data Science" },
+        { label: "B.Sc Cyber Security", value: "B.Sc Cyber Security" },
+        { label: "B.Sc Computer Technology", value: "B.Sc Computer Technology" },
+        { label: "B.Sc Software Systems", value: "B.Sc Software Systems" },
+        { label: "B.Sc Computer Applications", value: "B.Sc Computer Applications" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
     }
-  }, [degree]);
+  ];
+
+  const SPECIALIZATIONS = [
+    { label: "General", value: "General" },
+    { label: "Artificial Intelligence", value: "Artificial Intelligence" },
+    { label: "Machine Learning", value: "Machine Learning" },
+    { label: "Artificial Intelligence & Machine Learning", value: "Artificial Intelligence & Machine Learning" },
+    { label: "Data Science", value: "Data Science" },
+    { label: "Cyber Security", value: "Cyber Security" },
+    { label: "Information Security", value: "Information Security" },
+    { label: "Ethical Hacking", value: "Ethical Hacking" },
+    { label: "Cloud Computing", value: "Cloud Computing" },
+    { label: "DevOps", value: "DevOps" },
+    { label: "Internet of Things (IoT)", value: "IoT" },
+    { label: "Blockchain", value: "Blockchain" },
+    { label: "Full Stack Development", value: "Full Stack Development" },
+    { label: "Software Engineering", value: "Software Engineering" },
+    { label: "Mobile Application Development", value: "Mobile Application Development" },
+    { label: "Web Development", value: "Web Development" },
+    { label: "Computer Networks", value: "Computer Networks" },
+    { label: "Network Security", value: "Network Security" },
+    { label: "Database Management", value: "Database Management" },
+    { label: "Computer Vision", value: "Computer Vision" },
+    { label: "Natural Language Processing (NLP)", value: "NLP" },
+    { label: "Robotics", value: "Robotics" },
+    { label: "Embedded Systems", value: "Embedded Systems" },
+    { label: "Big Data Analytics", value: "Big Data Analytics" },
+    { label: "Game Development", value: "Game Development" },
+    { label: "AR/VR", value: "AR/VR" },
+    { label: "Quantum Computing", value: "Quantum Computing" }
+  ].sort((a, b) => a.label.localeCompare(b.label));
+
+  const STREAMS = [
+    {
+      label: "Engineering",
+      options: [
+        { label: "B.E.", value: "B.E." },
+        { label: "B.Tech.", value: "B.Tech." }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Arts & Science",
+      options: [
+        { label: "B.Sc", value: "B.Sc" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Commerce",
+      options: [
+        { label: "B.Com", value: "B.Com" },
+        { label: "B.Com Computer Applications", value: "B.Com Computer Applications" },
+        { label: "B.Com Information Systems", value: "B.Com Information Systems" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Management",
+      options: [
+        { label: "BBA", value: "BBA" },
+        { label: "BBA Computer Applications", value: "BBA Computer Applications" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Postgraduate",
+      options: [
+        { label: "M.E.", value: "M.E." },
+        { label: "M.Tech.", value: "M.Tech." },
+        { label: "MCA", value: "MCA" },
+        { label: "M.Sc", value: "M.Sc" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    },
+    {
+      label: "Diploma",
+      options: [
+        { label: "Diploma in Computer Engineering", value: "Diploma in Computer Engineering" },
+        { label: "Diploma in Information Technology", value: "Diploma in Information Technology" },
+        { label: "Diploma in AI & ML", value: "Diploma in AI & ML" },
+        { label: "Diploma in Cyber Security", value: "Diploma in Cyber Security" },
+        { label: "Diploma in Data Science", value: "Diploma in Data Science" }
+      ].sort((a, b) => a.label.localeCompare(b.label))
+    }
+  ];
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,9 +178,9 @@ function Signup() {
     if (activeTab === "student") {
       const start = parseInt(startYear);
       const end = parseInt(endYear);
-      const expectedDuration = (degree === "BE" || degree === "B.Tech") ? 4 : 3;
+      const expectedDuration = (stream === "B.Tech." || stream === "B.E.") ? 4 : 3;
       if (end - start !== expectedDuration) {
-        toast.error(`Invalid End Year. For ${degree}, graduation must be exactly ${expectedDuration} years after Start Year.`);
+        toast.error(`Invalid End Year. For ${stream}, graduation must be exactly ${expectedDuration} years after Start Year.`);
         setLoading(false);
         return;
       }
@@ -92,7 +194,7 @@ function Signup() {
           username,
           password,
           roleType: activeTab,
-          ...(activeTab === "student" ? { name, email, department, degree, startYear: parseInt(startYear), endYear: parseInt(endYear) } : {})
+          ...(activeTab === "student" ? { name, email, department, stream, specialization, startYear: parseInt(startYear), endYear: parseInt(endYear) } : {})
         }),
       });
       if (!res.ok) {
@@ -280,34 +382,36 @@ function Signup() {
                         />
                       </div>
 
+                      <div className="grid grid-cols-1 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium text-slate-700">Department</Label>
+                          <SearchableSelect 
+                            groups={DEPARTMENTS} 
+                            value={department} 
+                            onValueChange={setDepartment} 
+                            placeholder="Select Department" 
+                          />
+                        </div>
+                      </div>
+
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
-                          <Label htmlFor="degree" className="text-sm font-medium text-slate-700">Stream</Label>
-                          <Select value={degree} onValueChange={setDegree} required>
-                            <SelectTrigger id="degree" className="h-11 bg-slate-50 border-slate-200">
-                              <SelectValue placeholder="Select Stream" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="BE">BE</SelectItem>
-                              <SelectItem value="B.Tech">B.Tech</SelectItem>
-                              <SelectItem value="B.Sc">B.Sc</SelectItem>
-                              <SelectItem value="BA">BA</SelectItem>
-                              <SelectItem value="B.Com">B.Com</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-sm font-medium text-slate-700">Stream</Label>
+                          <SearchableSelect 
+                            groups={STREAMS} 
+                            value={stream} 
+                            onValueChange={setStream} 
+                            placeholder="Select Stream" 
+                          />
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="department" className="text-sm font-medium text-slate-700">Specialization</Label>
-                          <Select value={department} onValueChange={setDepartment} required disabled={!degree}>
-                            <SelectTrigger id="department" className="h-11 bg-slate-50 border-slate-200">
-                              <SelectValue placeholder={degree ? "Select..." : "Choose stream"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                              {availableDepartments.map((dept) => (
-                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
+                          <Label className="text-sm font-medium text-slate-700">Specialization</Label>
+                          <SearchableSelect 
+                            options={SPECIALIZATIONS} 
+                            value={specialization} 
+                            onValueChange={setSpecialization} 
+                            placeholder="Select Specialization" 
+                          />
                         </div>
                       </div>
 
