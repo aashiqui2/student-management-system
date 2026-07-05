@@ -3,18 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, type AssessmentApi, type StudentApi, type StudentCreatePayload } from "./api";
 import { useAuth } from "./auth";
 
-export type PursuingYear =
-  | "FIRST_YEAR"
-  | "SECOND_YEAR"
-  | "THIRD_YEAR"
-  | "FOURTH_YEAR";
 
-export const PURSUING_YEARS: { value: PursuingYear; label: string }[] = [
-  { value: "FIRST_YEAR", label: "First Year" },
-  { value: "SECOND_YEAR", label: "Second Year" },
-  { value: "THIRD_YEAR", label: "Third Year" },
-  { value: "FOURTH_YEAR", label: "Fourth Year" },
-];
 
 export interface Student {
   id: string;
@@ -25,13 +14,14 @@ export interface Student {
   department?: string;
   stream?: string;
   specialization?: string;
-  pursuingYear?: PursuingYear | "";
+  pursuingYearLabel?: string;
   hackerRankUsername?: string;
   linkedInUrl?: string;
   githubUrl?: string;
   leetcodeUrl?: string;
   startYear?: string;
-  endYear?: string;
+  courseDuration?: string;
+  graduationYear?: string;
   profilePicUrl?: string;
 }
 
@@ -47,6 +37,7 @@ export interface Assessment {
   assessmentName: string;
   dateConducted: string; // ISO date
   totalMarks: number;
+  createdBy?: string;
   resources?: AssessmentResource[];
 }
 
@@ -70,6 +61,32 @@ export interface StudentSummary extends Student {
 }
 
 function toStudent(student: StudentApi): Student {
+  let pursuingYearLabel = student.pursuingYearLabel ?? "";
+  if (!pursuingYearLabel && student.startYear) {
+    const startYear = parseInt(student.startYear.toString(), 10);
+    if (!isNaN(startYear)) {
+      const currentYear = new Date().getFullYear();
+      const currentMonth = new Date().getMonth() + 1; // 1-12
+      const durationStr = student.courseDuration?.toString() ?? "4";
+      const duration = parseInt(durationStr, 10);
+      const gradYear = startYear + (isNaN(duration) ? 4 : duration);
+      
+      if (currentYear >= gradYear) {
+        pursuingYearLabel = "Graduated";
+      } else if (currentYear < startYear) {
+        pursuingYearLabel = "Not Started";
+      } else {
+        const diff = currentYear - startYear;
+        let year = diff + (currentMonth >= 6 ? 1 : 0);
+        if (year <= 0) year = 1;
+        if (year === 1) pursuingYearLabel = "1st Year";
+        else if (year === 2) pursuingYearLabel = "2nd Year";
+        else if (year === 3) pursuingYearLabel = "3rd Year";
+        else pursuingYearLabel = `${year}th Year`;
+      }
+    }
+  }
+
   return {
     id: String(student.id),
     name: student.name,
@@ -79,13 +96,14 @@ function toStudent(student: StudentApi): Student {
     department: student.department ?? "",
     stream: student.stream ?? "",
     specialization: student.specialization ?? "",
-    pursuingYear: (student.pursuingYear as PursuingYear) ?? "",
+    pursuingYearLabel: pursuingYearLabel,
     hackerRankUsername: student.hackerRankUsername ?? "",
     linkedInUrl: student.linkedInUrl ?? "",
     githubUrl: student.githubUrl ?? "",
     leetcodeUrl: student.leetcodeUrl ?? "",
     startYear: student.startYear?.toString() ?? "",
-    endYear: student.endYear?.toString() ?? "",
+    courseDuration: student.courseDuration?.toString() ?? "",
+    graduationYear: student.graduationYear?.toString() ?? "",
     profilePicUrl: student.profilePicUrl ?? "",
   };
 }
@@ -96,6 +114,7 @@ function toAssessment(assessment: AssessmentApi): Assessment {
     assessmentName: assessment.assessmentName,
     dateConducted: assessment.dateConducted,
     totalMarks: assessment.totalMarks,
+    createdBy: assessment.createdBy,
     resources: assessment.resources?.map((resource) => ({
       id: String(resource.id),
       name: resource.name,
@@ -114,10 +133,9 @@ function toStudentCreatePayload(student: Omit<Student, "id">): StudentCreatePayl
     department: student.department || undefined,
     stream: student.stream || undefined,
     specialization: student.specialization || undefined,
-    pursuingYear: student.pursuingYear || undefined,
     hackerRankUsername: student.hackerRankUsername || undefined,
     startYear: student.startYear ? Number(student.startYear) : undefined,
-    endYear: student.endYear ? Number(student.endYear) : undefined,
+    courseDuration: student.courseDuration ? Number(student.courseDuration) : undefined,
     linkedInUrl: student.linkedInUrl || undefined,
     githubUrl: student.githubUrl || undefined,
     leetcodeUrl: student.leetcodeUrl || undefined,
@@ -159,9 +177,9 @@ export function SMSProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient();
   const { isStudent } = useAuth();
 
-  const studentsQuery = useQuery({ queryKey: ["students"], queryFn: api.getStudents, enabled: !isStudent });
-  const assessmentsQuery = useQuery({ queryKey: ["assessments"], queryFn: api.getAssessments, enabled: !isStudent });
-  const marksQuery = useQuery({ queryKey: ["marks"], queryFn: api.getAllMarks, enabled: !isStudent });
+  const studentsQuery = useQuery({ queryKey: ["students"], queryFn: api.getStudents });
+  const assessmentsQuery = useQuery({ queryKey: ["assessments"], queryFn: api.getAssessments });
+  const marksQuery = useQuery({ queryKey: ["marks"], queryFn: api.getAllMarks });
 
   const isLoading = studentsQuery.isLoading || assessmentsQuery.isLoading || marksQuery.isLoading;
   const isError = studentsQuery.isError || assessmentsQuery.isError || marksQuery.isError;

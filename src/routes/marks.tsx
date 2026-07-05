@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
-import { RequireRole } from "@/lib/auth";
+import { RequireRole, useAuth } from "@/lib/auth";
 import { useEffect, useRef, useState } from "react";
 import { PencilRuler, Save, Upload, Download } from "lucide-react";
 import { api } from "@/lib/api";
@@ -27,6 +27,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/marks")({
   head: () => ({
@@ -41,6 +50,7 @@ export const Route = createFileRoute("/marks")({
 function MarksEntry() {
   const queryClient = useQueryClient();
   const { assessments, students, marks, setMark, setMarksByRegNo } = useSMS();
+  const { isStudent } = useAuth();
   const [selected, setSelected] = useState<string>("");
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [importErrors, setImportErrors] = useState<ImportIssue[]>([]);
@@ -71,19 +81,33 @@ function MarksEntry() {
     
     const ops = [];
     for (const s of students) {
-      const raw = draft[s.id];
-      if (raw === undefined || raw === "") {
+      const raw = draft[s.id] ?? "";
+      const key = `${s.id}:${assessment.id}`;
+      const original = key in marks ? String(marks[key]) : "";
+
+      // Skip if no change was made
+      if (raw === original) {
+        continue;
+      }
+
+      if (raw === "") {
         ops.push({ studentId: s.id, val: null, regNo: s.regNo });
       } else {
         const val = Number(raw);
         if (!Number.isNaN(val)) {
           const clamped = Math.max(0, Math.min(val, assessment.totalMarks));
-          ops.push({ studentId: s.id, val: clamped, regNo: s.regNo });
+          // Ensure clamped value also represents a change
+          if (String(clamped) !== original) {
+            ops.push({ studentId: s.id, val: clamped, regNo: s.regNo });
+          }
         }
       }
     }
 
-    if (ops.length === 0) return;
+    if (ops.length === 0) {
+      toast.success("No changes to save.");
+      return;
+    }
 
     setIsSaving(true);
     setSaveProgress({ current: 0, total: ops.length });
@@ -117,8 +141,7 @@ function MarksEntry() {
     if (!file || !assessment) return;
     try {
       const result = await api.uploadMarksExcel(file, assessment.id);
-      await queryClient.invalidateQueries({ queryKey: [] });
-      await queryClient.invalidateQueries({ queryKey: [] });
+      await queryClient.invalidateQueries();
 
       const inserted = Number(result.marksInserted ?? 0);
       const updated = Number(result.marksUpdated ?? 0);
@@ -156,7 +179,7 @@ function MarksEntry() {
   };
 
   return (
-    <RequireRole roles={["ADMIN", "STAFF"]}>
+    <RequireRole roles={["ADMIN", "STAFF", "STUDENT"]}>
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -166,32 +189,36 @@ function MarksEntry() {
           <h1 className="text-3xl font-bold tracking-tight">Marks Entry</h1>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <input
-            ref={fileInput}
-            type="file"
-            accept=".xlsx,.xls,.csv"
-            className="hidden"
-            onChange={handleImport}
-          />
-          <Button
-            variant="outline"
-            onClick={() => downloadMarksTemplate(assessment?.totalMarks ?? 100)}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Template
-          </Button>
-          <Button
-            variant="outline"
-            disabled={!selected}
-            onClick={() => fileInput.current?.click()}
-          >
-            <Upload className="mr-2 h-4 w-4" />
-            Import Excel
-          </Button>
-          <Button onClick={save} disabled={!selected || isSaving}>
-            <Save className="mr-2 h-4 w-4" />
-            {isSaving ? `Saving (${saveProgress.current}/${saveProgress.total})...` : "Save Marks"}
-          </Button>
+          {!isStudent && (
+            <>
+              <input
+                ref={fileInput}
+                type="file"
+                accept=".xlsx,.xls,.csv"
+                className="hidden"
+                onChange={handleImport}
+              />
+              <Button
+                variant="outline"
+                onClick={() => downloadMarksTemplate(assessment?.totalMarks ?? 100)}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Template
+              </Button>
+              <Button
+                variant="outline"
+                disabled={!selected}
+                onClick={() => fileInput.current?.click()}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                Import Excel
+              </Button>
+              <Button onClick={save} disabled={!selected || isSaving}>
+                <Save className="mr-2 h-4 w-4" />
+                {isSaving ? `Saving (${saveProgress.current}/${saveProgress.total})...` : "Save Marks"}
+              </Button>
+            </>
+          )}
         </div>
       </div>
       {importErrors.length > 0 && (
@@ -257,14 +284,13 @@ function MarksEntry() {
                     <tr className="border-b bg-muted/50 text-left text-muted-foreground">
                       <th className="px-5 py-3 font-semibold">Student</th>
                       <th className="px-5 py-3 font-semibold">Reg No</th>
-                      <th className="px-5 py-3 font-semibold">Department</th>
                       <th className="px-5 py-3 font-semibold">Stream</th>
-                      <th className="px-5 py-3 font-semibold">Specialization</th>
+                      <th className="px-5 py-3 font-semibold">Department</th>
                       <th className="px-5 py-3 font-semibold">Marks Scored</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {students.map((s) => (
+                    {[...students].sort((a, b) => a.regNo.localeCompare(b.regNo)).map((s) => (
                       <tr key={s.id} className="border-b last:border-0">
                         <td className="px-5 py-3">
                           <div className="flex items-center gap-3">
@@ -278,26 +304,29 @@ function MarksEntry() {
                         </td>
                         <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
                         <td className="px-5 py-3">
-                          <Badge variant="secondary">{s.department || "N/A"}</Badge>
-                        </td>
-                        <td className="px-5 py-3">
                           <Badge variant="secondary">{s.stream || "N/A"}</Badge>
                         </td>
                         <td className="px-5 py-3">
                           <Badge variant="secondary">{s.specialization || "N/A"}</Badge>
                         </td>
                         <td className="px-5 py-3">
-                          <Input
-                            type="number"
-                            min={0}
-                            max={assessment.totalMarks}
-                            value={draft[s.id] ?? ""}
-                            onChange={(e) =>
-                              setDraft((d) => ({ ...d, [s.id]: e.target.value }))
-                            }
-                            className="w-28"
-                            placeholder={`/ ${assessment.totalMarks}`}
-                          />
+                          {!isStudent ? (
+                            <Input
+                              type="number"
+                              min={0}
+                              max={assessment.totalMarks}
+                              value={draft[s.id] ?? ""}
+                              onChange={(e) =>
+                                setDraft((d) => ({ ...d, [s.id]: e.target.value }))
+                              }
+                              className="w-28"
+                              placeholder={`/ ${assessment.totalMarks}`}
+                            />
+                          ) : (
+                            <div className="font-medium">
+                              {marks[`${s.id}:${assessment.id}`] !== undefined ? marks[`${s.id}:${assessment.id}`] : "N/A"} / {assessment.totalMarks}
+                            </div>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -316,6 +345,38 @@ function MarksEntry() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={showImportErrors} onOpenChange={setShowImportErrors}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Import error details</AlertDialogTitle>
+            <AlertDialogDescription>
+              Review the rows that failed during Excel import.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto mt-4 rounded-md border text-sm">
+            <table className="w-full">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-2 text-left font-semibold">Row</th>
+                  <th className="px-4 py-2 text-left font-semibold">Error Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {importErrors.map((err, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="px-4 py-2 font-mono text-muted-foreground">{err.row || "-"}</td>
+                    <td className="px-4 py-2 text-destructive">{err.reason}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setShowImportErrors(false)}>Close</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
     </RequireRole>
   );

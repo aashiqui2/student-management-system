@@ -4,7 +4,6 @@ import { useState, useEffect } from "react";
 import { ArrowLeft, UploadCloud } from "lucide-react";
 import { toast } from "sonner";
 import {
-  PURSUING_YEARS,
   useSMS,
   type Student,
 } from "@/lib/sms-data";
@@ -70,15 +69,13 @@ export function StudentForm({ id }: { id?: string }) {
     clearErrors,
     formState: { errors, isDirty },
   } = useForm<FormValues>({
-    defaultValues: existing ?? { pursuingYear: "" },
+    defaultValues: existing ?? {},
   });
 
-  const pursuingYear = watch("pursuingYear");
-  const department = watch("department");
+  const startYear = watch("startYear");
+  const courseDuration = watch("courseDuration");
   const stream = watch("stream");
   const specialization = watch("specialization");
-  const startYear = watch("startYear");
-  const endYear = watch("endYear");
 
   // Reset specialization if the stream changes
   useEffect(() => {
@@ -99,21 +96,22 @@ export function StudentForm({ id }: { id?: string }) {
   }, [isDirty]);
 
   const onSubmit = async (data: FormValues) => {
-    const start = Number(data.startYear);
-    const end = Number(data.endYear);
-    const expectedDuration = (data.stream === "B.Tech") ? 4 : 3;
+    const duration = Number(data.courseDuration);
+    const streamUpper = data.stream?.toUpperCase() || "";
+    const isEngineering = streamUpper.includes("ENGINEERING") || streamUpper.includes("B.E") || streamUpper.includes("B.TECH") || streamUpper === "BE" || streamUpper === "BTECH";
+    const expectedDuration = isEngineering ? 4 : 3;
 
-    if (data.startYear && data.endYear) {
-      if (end - start !== expectedDuration) {
-        setError("endYear", {
+    if (data.courseDuration) {
+      if (duration !== expectedDuration) {
+        setError("courseDuration", {
           type: "validate",
-          message: `For ${data.stream}, graduation must be exactly ${expectedDuration} years after Start Year.`,
+          message: `For ${data.stream}, course duration must be exactly ${expectedDuration} years.`,
         });
         return;
       }
     }
 
-    clearErrors("endYear");
+    clearErrors("courseDuration");
 
     try {
       if (isEdit && id) {
@@ -136,40 +134,7 @@ export function StudentForm({ id }: { id?: string }) {
     }
   };
 
-  const DEPARTMENTS = [
-    {
-      label: "Engineering",
-      options: [
-        { label: "Computer Science and Engineering (CSE)", value: "CSE" },
-        { label: "Information Technology (IT)", value: "IT" },
-        { label: "Artificial Intelligence and Machine Learning (AI & ML)", value: "AI & ML" },
-        { label: "Artificial Intelligence and Data Science (AI & DS)", value: "AI & DS" },
-        { label: "Computer Science and Business Systems (CSBS)", value: "CSBS" },
-        { label: "Computer Engineering", value: "Computer Engineering" },
-        { label: "Cyber Security", value: "Cyber Security" },
-        { label: "Data Science", value: "Data Science" },
-        { label: "Internet of Things (IoT)", value: "IoT" },
-        { label: "Robotics and Artificial Intelligence", value: "Robotics and AI" },
-        { label: "Software Engineering", value: "Software Engineering" },
-        { label: "Cloud Computing", value: "Cloud Computing" },
-        { label: "Blockchain Technology", value: "Blockchain Technology" }
-      ].sort((a, b) => a.label.localeCompare(b.label))
-    },
-    {
-      label: "Arts & Science",
-      options: [
-        { label: "B.Sc Computer Science", value: "B.Sc CS" },
-        { label: "B.Sc Information Technology", value: "B.Sc IT" },
-        { label: "B.Sc Artificial Intelligence", value: "B.Sc AI" },
-        { label: "B.Sc Artificial Intelligence and Machine Learning", value: "B.Sc AI & ML" },
-        { label: "B.Sc Data Science", value: "B.Sc Data Science" },
-        { label: "B.Sc Cyber Security", value: "B.Sc Cyber Security" },
-        { label: "B.Sc Computer Technology", value: "B.Sc Computer Technology" },
-        { label: "B.Sc Software Systems", value: "B.Sc Software Systems" },
-        { label: "B.Sc Computer Applications", value: "B.Sc Computer Applications" }
-      ].sort((a, b) => a.label.localeCompare(b.label))
-    }
-  ];
+
 
   const SPECIALIZATIONS_GROUPS = [
     { label: "General", value: "General" },
@@ -289,7 +254,6 @@ export function StudentForm({ id }: { id?: string }) {
                       required: "Email is required",
                       pattern: { value: /^\S+@\S+$/i, message: "Invalid email address" },
                     })}
-                    disabled={isReadOnly}
                   />
                 </Field>
                 <Field label="Mobile Number (Optional)" error={errors.mobileNumber?.message}>
@@ -308,17 +272,7 @@ export function StudentForm({ id }: { id?: string }) {
             <section>
               <h2 className="mb-1 text-lg font-bold text-primary">Academic Details</h2>
               <Separator className="mb-5" />
-              <div className="grid grid-cols-1 gap-5">
-                <Field label="Department" error={errors.department?.message}>
-                  <SearchableSelect
-                    groups={DEPARTMENTS}
-                    value={department || ""}
-                    onValueChange={(v) => setValue("department", v as FormValues["department"])}
-                    disabled={isStudent}
-                    placeholder="Select Department"
-                  />
-                </Field>
-              </div>
+
               <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 mt-5">
                 <Field label="Stream" error={errors.stream?.message}>
                   <SearchableSelect
@@ -329,13 +283,13 @@ export function StudentForm({ id }: { id?: string }) {
                     placeholder="Select Stream"
                   />
                 </Field>
-                <Field label="Specialization" error={errors.specialization?.message}>
+                <Field label="Department" error={errors.specialization?.message}>
                   <SearchableSelect
                     options={SPECIALIZATIONS_GROUPS}
                     value={specialization || ""}
                     onValueChange={(v) => setValue("specialization", v as FormValues["specialization"])}
                     disabled={isStudent || !stream}
-                    placeholder="Select Specialization"
+                    placeholder="Select Department"
                   />
                   {errors.specialization?.message && <p className="text-xs text-destructive">{errors.specialization.message}</p>}
                 </Field>
@@ -357,43 +311,22 @@ export function StudentForm({ id }: { id?: string }) {
                     </SelectContent>
                   </Select>
                 </Field>
-                <Field label="End Year (Graduation)" error={errors.endYear?.message}>
+                <Field label="Course Duration (Years)" error={errors.courseDuration?.message}>
                   <Select
-                    value={endYear || ""}
-                    onValueChange={(v) => setValue("endYear", v)}
+                    value={courseDuration ? String(courseDuration) : ""}
+                    onValueChange={(v) => setValue("courseDuration", Number(v))}
                   >
                     <SelectTrigger>
-                      <SelectValue placeholder="Select end year" />
+                      <SelectValue placeholder="Select duration" />
                     </SelectTrigger>
                     <SelectContent>
-                      {YEAR_OPTIONS.map((year) => (
-                        <SelectItem key={year} value={year}>
-                          {year}
+                      {[1, 2, 3, 4, 5].map((year) => (
+                        <SelectItem key={year} value={String(year)}>
+                          {year} {year === 1 ? 'Year' : 'Years'}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                </Field>
-                <Field label="Pursuing Year" error={errors.pursuingYear?.message}>
-                  <Select
-                    value={pursuingYear || ""}
-                    onValueChange={(v) =>
-                      setValue("pursuingYear", v as FormValues["pursuingYear"])
-                    }
-                    disabled={isStudent}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select year" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PURSUING_YEARS.map((y) => (
-                        <SelectItem key={y.value} value={y.value}>
-                          {y.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.pursuingYear?.message && <p className="text-xs text-destructive">{errors.pursuingYear.message}</p>}
                 </Field>
               </div>
             </section>

@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { useEffect, useState, useRef } from "react";
 import { api, type StaffProfileApi, type DesignationApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -11,10 +11,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { DEPARTMENTS, STREAMS, SPECIALIZATIONS } from "@/lib/constants";
 import { toast } from "sonner";
 import { 
   Mail, Phone, Briefcase, Linkedin, Github, Globe, Lock, Camera, 
-  Trash2, Calendar, MapPin, Award, User as UserIcon, ShieldAlert 
+  Trash2, Calendar, MapPin, Award, User as UserIcon, ShieldAlert,
+  Eye, EyeOff, CheckCircle2, XCircle
 } from "lucide-react";
 import { API_BASE } from "@/lib/api";
 
@@ -43,7 +46,12 @@ function StaffProfilePage() {
     retry: false, // Don't infinite retry if 404
   });
 
-  const { register, handleSubmit, watch, reset, formState: { errors } } = useForm({
+  const { data: designations = [] } = useQuery({
+    queryKey: ["designations"],
+    queryFn: api.getDesignations,
+  });
+
+  const { register, handleSubmit, watch, reset, control, formState: { errors } } = useForm({
     defaultValues: {
       name: "",
       email: "",
@@ -61,6 +69,7 @@ function StaffProfilePage() {
       experience: 0,
       githubUrl: "",
       portfolioUrl: "",
+      designationId: "",
     },
   });
 
@@ -70,6 +79,23 @@ function StaffProfilePage() {
     newPassword: "",
     confirmPassword: "",
   });
+
+  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  const passwordRequirements = [
+    { met: passwordData.newPassword.length >= 8, text: "At least 8 characters" },
+    { met: /[A-Z]/.test(passwordData.newPassword), text: "One uppercase letter" },
+    { met: /[a-z]/.test(passwordData.newPassword), text: "One lowercase letter" },
+    { met: /[0-9]/.test(passwordData.newPassword), text: "One number" },
+    { met: /[^A-Za-z0-9]/.test(passwordData.newPassword), text: "One special character" },
+  ];
+
+  const strength = passwordRequirements.filter(r => r.met).length;
+  const strengthColor = strength <= 2 ? "bg-red-500" : strength <= 4 ? "bg-amber-500" : "bg-emerald-500";
+  const strengthBgColor = strength <= 2 ? "bg-red-500/10" : strength <= 4 ? "bg-amber-500/10" : "bg-emerald-500/10";
+  const strengthLabel = strength <= 2 ? "Weak" : strength <= 4 ? "Medium" : "Strong";
 
   const isProfileIncomplete = staffProfile && !staffProfile.name;
 
@@ -87,10 +113,13 @@ function StaffProfilePage() {
       };
 
       reset({
+        username: staffProfile.user?.username || "",
         name: staffProfile.name || "",
         email: staffProfile.email || "",
         mobileNumber: staffProfile.mobileNumber || "",
         linkedInUrl: staffProfile.linkedInUrl || "",
+        department: staffProfile.department || "",
+        stream: staffProfile.stream || "",
         specialization: staffProfile.specialization || "",
         gender: staffProfile.gender || "",
         dateOfBirth: normalizeDateStr(staffProfile.dateOfBirth),
@@ -103,6 +132,7 @@ function StaffProfilePage() {
         experience: staffProfile.experience || 0,
         githubUrl: staffProfile.githubUrl || "",
         portfolioUrl: staffProfile.portfolioUrl || "",
+        designationId: staffProfile.designation?.id?.toString() || "",
       });
 
       // Force editing if profile is incomplete
@@ -133,19 +163,30 @@ function StaffProfilePage() {
       setPasswordData({ currentPassword: "", newPassword: "", confirmPassword: "" });
     },
     onError: (error: Error) => {
-      toast.error(error.message || "Failed to change password. Make sure current password is correct.");
+      const msg = error.message.replace(/API request failed: \d+ \w+ /, "");
+      toast.error(msg || "Failed to change password. Make sure current password is correct.");
     },
   });
 
+  const watchDesignationId = watch("designationId");
+  const selectedDesignation = designations.find((d: any) => d.id.toString() === watchDesignationId);
+  const designationName = selectedDesignation?.designationName || selectedDesignation?.name || "";
+  const isTrainer = ["Technical Trainer", "Soft Skill Trainer", "Aptitude Trainer"].includes(designationName);
+  const isFaculty = designationName === "College Faculty";
+
   const onSubmit = (data: any) => {
-    // Strip empty strings so they don't overwrite existing data with blanks
-    const payload: Record<string, any> = {};
-    for (const [key, value] of Object.entries(data)) {
-      if (value !== "" && value !== null && value !== undefined) {
-        payload[key] = value;
-      }
+    const payload = { ...data };
+    if (payload.designationId) {
+      payload.designation = { id: parseInt(payload.designationId, 10) };
     }
-    updateMutation.mutate(payload as any);
+    
+    if (isTrainer) {
+      payload.department = null;
+      payload.stream = null;
+    }
+    
+    delete payload.designationId;
+    updateMutation.mutate(payload);
   };
 
   const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -185,8 +226,8 @@ function StaffProfilePage() {
 
   const handleChangePasswordSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (passwordData.newPassword.length < 8) {
-      toast.error("New password must be at least 8 characters");
+    if (strength < 5) {
+      toast.error("New password does not meet all requirements");
       return;
     }
     if (passwordData.newPassword !== passwordData.confirmPassword) {
@@ -253,24 +294,26 @@ function StaffProfilePage() {
                 {profile.name ? profile.name.charAt(0).toUpperCase() : user?.username.charAt(0).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity cursor-pointer">
-              <button 
-                onClick={() => fileInputRef.current?.click()} 
-                title="Upload Photo"
-                className="p-1.5 bg-white/20 rounded-full hover:bg-white/40 transition text-white"
-              >
-                <Camera className="w-4 h-4" />
-              </button>
-              {profile.profilePhotoUrl && (
+            {isEditing && (
+              <div className="absolute inset-0 bg-black/40 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity cursor-pointer">
                 <button 
-                  onClick={handleRemovePhoto} 
-                  title="Remove Photo"
-                  className="p-1.5 bg-red-500/80 rounded-full hover:bg-red-500 transition text-white"
+                  onClick={() => fileInputRef.current?.click()} 
+                  title="Upload Photo"
+                  className="p-1.5 bg-white/20 rounded-full hover:bg-white/40 transition text-white"
                 >
-                  <Trash2 className="w-4 h-4" />
+                  <Camera className="w-4 h-4" />
                 </button>
-              )}
-            </div>
+                {profile.profilePhotoUrl && (
+                  <button 
+                    onClick={handleRemovePhoto} 
+                    title="Remove Photo"
+                    className="p-1.5 bg-red-500/80 rounded-full hover:bg-red-500 transition text-white"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            )}
             <input 
               type="file" 
               ref={fileInputRef} 
@@ -343,7 +386,23 @@ function StaffProfilePage() {
                 {...register("name", { required: "Name is required" })}
                 className="mt-1.5"
               />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message as string}</p>}
+            </div>
+
+            <div>
+              <Label htmlFor="username">Username</Label>
+              <Input
+                id="username"
+                disabled={!isEditing}
+                placeholder="Username"
+                {...register("username", { 
+                  required: "Username is required",
+                  pattern: { value: /^[a-zA-Z0-9_]+$/, message: "Username can only contain letters, numbers, and underscores" },
+                  minLength: { value: 3, message: "Username must be at least 3 characters" }
+                })}
+                className="mt-1.5"
+              />
+              {errors.username && <p className="text-red-500 text-xs mt-1">{errors.username.message as string}</p>}
             </div>
 
             <div>
@@ -366,30 +425,42 @@ function StaffProfilePage() {
               <Input
                 id="mobileNumber"
                 disabled={!isEditing}
+                maxLength={10}
                 placeholder="10 digit mobile number"
                 {...register("mobileNumber", { 
-                  pattern: { value: /^\d{10}$/i, message: "Mobile number must be 10 digits" }
+                  pattern: { value: /^\d{10}$/i, message: "Mobile number must be 10 digits" },
+                  onChange: (e) => {
+                    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                  }
                 })}
                 className="mt-1.5"
               />
-              {errors.mobileNumber && <p className="text-red-500 text-xs mt-1">{errors.mobileNumber.message}</p>}
+              {errors.mobileNumber && <p className="text-red-500 text-xs mt-1">{errors.mobileNumber.message as string}</p>}
             </div>
 
             <div>
               <Label htmlFor="gender">Gender</Label>
               {isEditing ? (
-                <select
-                  id="gender"
-                  {...register("gender")}
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1.5"
-                >
-                  <option value="">Select Gender</option>
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
-                </select>
+                <Controller
+                  name="gender"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="mt-1.5">
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <SelectTrigger className="w-full bg-background border-input">
+                          <SelectValue placeholder="Select Gender" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Male">Male</SelectItem>
+                          <SelectItem value="Female">Female</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
               ) : (
-                <Input id="gender" disabled value={profile.gender || "—"} className="mt-1.5" />
+                <Input id="gender" disabled value={profile.gender || "—"} className="mt-1.5 bg-muted/50" />
               )}
             </div>
 
@@ -476,84 +547,199 @@ function StaffProfilePage() {
               <Input
                 id="employeeId"
                 disabled
-                value={profile.employeeId || "Not assigned by Admin"}
+                value={profile.employeeId || "Will be generated automatically"}
                 className="mt-1.5 bg-muted/50"
               />
             </div>
 
             <div>
-              <Label htmlFor="department">Department (Read Only)</Label>
-              <Input
-                id="department"
-                disabled
-                value={profile.department || "Not assigned"}
-                className="mt-1.5 bg-muted/50"
-              />
+              <Label htmlFor="designationId">Designation</Label>
+              {isEditing ? (
+                <Controller
+                  name="designationId"
+                  control={control}
+                  render={({ field }) => (
+                    <div className="mt-1.5">
+                      <Select onValueChange={field.onChange} value={field.value || ""}>
+                        <SelectTrigger className="w-full bg-background border-input">
+                          <SelectValue placeholder="Select Designation" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {designations.map((d: any) => (
+                            <SelectItem key={d.id} value={d.id.toString()}>
+                              {d.designationName || d.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                />
+              ) : (
+                <Input
+                  id="designationId"
+                  disabled
+                  value={profile.designation ? (profile.designation.name || (profile.designation as any).designationName) : "Not assigned"}
+                  className="mt-1.5 bg-muted/50"
+                />
+              )}
             </div>
 
-            <div>
-              <Label htmlFor="stream">Stream (Read Only)</Label>
-              <Input
-                id="stream"
-                disabled
-                value={profile.stream || "Not assigned"}
-                className="mt-1.5 bg-muted/50"
-              />
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <Label htmlFor="department">Department</Label>
+              {isEditing ? (
+                <Controller
+                  name="department"
+                  control={control}
+                  rules={{ required: false }}
+                  render={({ field }) => (
+                    <div className="mt-1.5">
+                      <SearchableSelect
+                        groups={DEPARTMENTS}
+                        value={field.value}
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          setValue("stream", "");
+                        }}
+                        placeholder="Select Department"
+                      />
+                    </div>
+                  )}
+                />
+              ) : (
+                <Input
+                  id="department"
+                  disabled
+                  value={profile.department || "Not specified"}
+                  className="mt-1.5 bg-muted/50"
+                />
+              )}
             </div>
 
-            <div>
-              <Label htmlFor="designation">Designation (Read Only)</Label>
-              <Input
-                id="designation"
-                disabled
-                value={profile.designation ? (profile.designation.name || (profile.designation as any).designationName) : "Not assigned"}
-                className="mt-1.5 bg-muted/50"
-              />
+            <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+              <Label htmlFor="stream">Stream</Label>
+              {isEditing ? (
+                <Controller
+                  name="stream"
+                  control={control}
+                  rules={{ required: false }}
+                  render={({ field }) => (
+                    <div className="mt-1.5">
+                      <SearchableSelect
+                        groups={STREAMS}
+                        value={field.value}
+                        onValueChange={(val) => {
+                          field.onChange(val);
+                          setValue("specialization", "");
+                        }}
+                        placeholder="Select Stream"
+                      />
+                    </div>
+                  )}
+                />
+              ) : (
+                <Input
+                  id="stream"
+                  disabled
+                  value={profile.stream || "Not specified"}
+                  className="mt-1.5 bg-muted/50"
+                />
+              )}
             </div>
 
-            <div>
-              <Label htmlFor="joiningDate">Joining Date (Read Only)</Label>
-              <Input
-                id="joiningDate"
-                disabled
-                value={profile.joiningDate ? new Date(profile.joiningDate).toLocaleDateString() : "—"}
-                className="mt-1.5 bg-muted/50"
-              />
-            </div>
+            {(isTrainer || isFaculty) && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <Label htmlFor="qualification">Highest Qualification</Label>
+                {isEditing ? (
+                  <select
+                    id="qualification"
+                    {...register("qualification", { required: (isTrainer || isFaculty) ? "Qualification is required" : false })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 mt-1.5"
+                  >
+                    <option value="">Select Qualification</option>
+                    <optgroup label="Postgraduate">
+                      <option value="Ph.D.">Ph.D.</option>
+                      <option value="M.E.">M.E.</option>
+                      <option value="M.Tech.">M.Tech.</option>
+                      <option value="M.Sc.">M.Sc.</option>
+                      <option value="MCA">MCA</option>
+                      <option value="MBA">MBA</option>
+                    </optgroup>
+                    <optgroup label="Undergraduate">
+                      <option value="B.E.">B.E.</option>
+                      <option value="B.Tech.">B.Tech.</option>
+                      <option value="B.Sc.">B.Sc.</option>
+                      <option value="BCA">BCA</option>
+                      <option value="BBA">BBA</option>
+                    </optgroup>
+                    <optgroup label="Diploma">
+                      <option value="Diploma">Diploma</option>
+                    </optgroup>
+                  </select>
+                ) : (
+                  <Input id="qualification" disabled value={profile.qualification || "—"} className="mt-1.5" />
+                )}
+                {errors.qualification && <p className="text-red-500 text-xs mt-1">{errors.qualification.message as string}</p>}
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="qualification">Qualification</Label>
-              <Input
-                id="qualification"
-                disabled={!isEditing}
-                placeholder="e.g. M.Tech, Ph.D."
-                {...register("qualification")}
-                className="mt-1.5"
-              />
-            </div>
+            {(isTrainer || isFaculty) && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <Label htmlFor="specialization">Specialization</Label>
+                {isEditing ? (
+                  <Controller
+                    name="specialization"
+                    control={control}
+                    rules={{ required: (isTrainer || isFaculty) ? "Specialization is required" : false }}
+                    render={({ field }) => (
+                      <div className="mt-1.5">
+                        <SearchableSelect
+                          options={SPECIALIZATIONS}
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          placeholder="Select Specialization"
+                        />
+                        {errors.specialization && <p className="text-red-500 text-xs mt-1">{errors.specialization.message as string}</p>}
+                      </div>
+                    )}
+                  />
+                ) : (
+                  <Input id="specialization" disabled value={profile.specialization || "Not assigned"} className="mt-1.5 bg-muted/50" />
+                )}
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="specialization">Specialization</Label>
-              <Input
-                id="specialization"
-                disabled={!isEditing}
-                placeholder="e.g. Machine Learning, Cyber Security"
-                {...register("specialization")}
-                className="mt-1.5"
-              />
-            </div>
+            {(isTrainer || isFaculty) && (
+              <div className="animate-in fade-in slide-in-from-top-4 duration-300">
+                <Label htmlFor="experience">Years of Experience</Label>
+                <Input
+                  id="experience"
+                  type="number"
+                  min="0"
+                  disabled={!isEditing}
+                  {...register("experience", { 
+                    valueAsNumber: true,
+                    required: (isTrainer || isFaculty) ? "Experience is required" : false 
+                  })}
+                  className="mt-1.5"
+                />
+                {errors.experience && <p className="text-red-500 text-xs mt-1">{errors.experience.message as string}</p>}
+              </div>
+            )}
 
-            <div>
-              <Label htmlFor="experience">Years of Experience</Label>
-              <Input
-                id="experience"
-                type="number"
-                disabled={!isEditing}
-                placeholder="Years"
-                {...register("experience", { valueAsNumber: true })}
-                className="mt-1.5"
-              />
-            </div>
+            {!isEditing && (
+              <div>
+                <Label htmlFor="joiningDate">Joining Date (Read Only)</Label>
+                <Input
+                  id="joiningDate"
+                  disabled
+                  value={profile.joiningDate ? new Date(profile.joiningDate).toLocaleDateString() : "—"}
+                  className="mt-1.5 bg-muted/50"
+                />
+              </div>
+            )}
+
+
           </CardContent>
         </Card>
 
@@ -673,34 +859,94 @@ function StaffProfilePage() {
           <form onSubmit={handleChangePasswordSubmit} className="space-y-4 py-2">
             <div className="space-y-1.5">
               <Label htmlFor="currPass">Current Password</Label>
-              <Input
-                id="currPass"
-                type="password"
-                required
-                value={passwordData.currentPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
-              />
+              <div className="relative">
+                <Input
+                  id="currPass"
+                  type={showCurrentPassword ? "text" : "password"}
+                  required
+                  value={passwordData.currentPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, currentPassword: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCurrentPassword(!showCurrentPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="newPass">New Password</Label>
-              <Input
-                id="newPass"
-                type="password"
-                required
-                value={passwordData.newPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
-              />
-              <p className="text-xs text-muted-foreground">Minimum 8 characters.</p>
+              <div className="relative">
+                <Input
+                  id="newPass"
+                  type={showNewPassword ? "text" : "password"}
+                  required
+                  value={passwordData.newPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, newPassword: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+
+              {passwordData.newPassword && (
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="flex-1 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${strengthColor}`}
+                        style={{ width: `${(strength / 5) * 100}%` }}
+                      />
+                    </div>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${strengthBgColor} ${strength <= 2 ? 'text-red-600' : strength <= 4 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      {strengthLabel}
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-1">
+                    {passwordRequirements.map((req, i) => (
+                      <div key={i} className="flex items-center gap-1.5 text-xs">
+                        {req.met ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                        ) : (
+                          <XCircle className="h-3.5 w-3.5 text-slate-300" />
+                        )}
+                        <span className={req.met ? "text-slate-600" : "text-slate-400"}>
+                          {req.text}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="confPass">Confirm Password</Label>
-              <Input
-                id="confPass"
-                type="password"
-                required
-                value={passwordData.confirmPassword}
-                onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
-              />
+              <div className="relative">
+                <Input
+                  id="confPass"
+                  type={showConfirmPassword ? "text" : "password"}
+                  required
+                  value={passwordData.confirmPassword}
+                  onChange={(e) => setPasswordData({ ...passwordData, confirmPassword: e.target.value })}
+                  className="pr-10"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             <DialogFooter className="pt-4">
               <Button 

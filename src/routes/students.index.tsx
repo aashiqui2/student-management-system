@@ -62,7 +62,7 @@ function StudentList() {
     if (!file) return;
     try {
       const result = await api.uploadStudentsExcel(file);
-      await queryClient.invalidateQueries({ queryKey: [] });
+      await queryClient.invalidateQueries();
       const inserted = Number(result.insertedCount ?? 0);
       const updated = Number(result.updatedCount ?? 0);
       const skipped = Number(result.skippedCount ?? 0);
@@ -119,13 +119,13 @@ function StudentList() {
                 className="hidden"
                 onChange={handleImport}
               />
-              {isAdmin && selectedIds.size > 0 && (
+              {(isAdmin || isStaff) && selectedIds.size > 0 && (
                 <Button variant="destructive" onClick={() => setShowBulkDeleteConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete Selected ({selectedIds.size})
                 </Button>
               )}
-              {isAdmin && filtered.length > 0 && selectedIds.size === 0 && (
+              {(isAdmin || isStaff) && filtered.length > 0 && selectedIds.size === 0 && (
                 <Button variant="destructive" onClick={() => setShowDeleteAllConfirm(true)}>
                   <Trash2 className="mr-2 h-4 w-4" />
                   Delete All
@@ -185,7 +185,7 @@ function StudentList() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-y bg-muted/50 text-left text-muted-foreground">
-                    {isAdmin && (
+                    {(isAdmin || isStaff) && (
                       <th className="px-5 py-3 w-[40px]">
                         <input
                           type="checkbox"
@@ -203,17 +203,15 @@ function StudentList() {
                     <th className="px-5 py-3 font-semibold">Student</th>
                     <th className="px-5 py-3 font-semibold">Reg No</th>
                     <th className="px-5 py-3 font-semibold">Department</th>
-                    <th className="px-5 py-3 font-semibold">Stream</th>
-                    <th className="px-5 py-3 font-semibold">Specialization</th>
                     <th className="px-5 py-3 font-semibold">Year</th>
                     <th className="px-5 py-3 text-center font-semibold">Category</th>
-                    {isAdmin && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
+                    {(isAdmin || isStaff) && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((s) => (
                     <tr key={s.id} className="border-b transition-colors hover:bg-muted/40">
-                      {isAdmin && (
+                      {(isAdmin || isStaff) && (
                         <td className="px-5 py-3">
                           <input
                             type="checkbox"
@@ -250,39 +248,29 @@ function StudentList() {
                       <td className="px-5 py-3 font-mono text-xs">{s.regNo}</td>
                       <td className="px-5 py-3">
                         <Badge variant="secondary">
-                          {s.department ? s.department : "N/A"}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge variant="secondary">
-                          {s.stream ? s.stream : "N/A"}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3">
-                        <Badge variant="secondary">
-                          {s.specialization ? s.specialization : "N/A"}
+                          {s.specialization || s.department || "N/A"}
                         </Badge>
                       </td>
                       <td className="px-5 py-3 text-muted-foreground">
-                        {s.pursuingYear
-                          ? s.pursuingYear.replace("_", " ").toLowerCase()
-                          : "—"}
+                        {s.pursuingYearLabel ? s.pursuingYearLabel : "—"}
                       </td>
                       <td className="px-5 py-3 text-center">
                         <CategoryBadge category={s.category} />
                       </td>
-                      {isAdmin && (
+                      {(isAdmin || isStaff) && (
                         <td className="px-5 py-3">
                           <div className="flex items-center justify-center gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() =>
-                                navigate({ to: "/students/edit/$id", params: { id: s.id } })
-                              }
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  navigate({ to: "/students/edit/$id", params: { id: s.id } })
+                                }
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"

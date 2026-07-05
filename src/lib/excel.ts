@@ -1,31 +1,7 @@
 import * as XLSX from "xlsx";
-import type { Student, PursuingYear } from "./sms-data";
+import type { Student } from "./sms-data";
 
 export type StudentRow = Omit<Student, "id">;
-
-const YEAR_MAP: Record<string, PursuingYear> = {
-  "1": "FIRST_YEAR",
-  "first": "FIRST_YEAR",
-  "first year": "FIRST_YEAR",
-  "first_year": "FIRST_YEAR",
-  "2": "SECOND_YEAR",
-  "second": "SECOND_YEAR",
-  "second year": "SECOND_YEAR",
-  "second_year": "SECOND_YEAR",
-  "3": "THIRD_YEAR",
-  "third": "THIRD_YEAR",
-  "third year": "THIRD_YEAR",
-  "third_year": "THIRD_YEAR",
-  "4": "FOURTH_YEAR",
-  "fourth": "FOURTH_YEAR",
-  "fourth year": "FOURTH_YEAR",
-  "fourth_year": "FOURTH_YEAR",
-};
-
-function normYear(v: unknown): PursuingYear | "" {
-  if (v === undefined || v === null) return "";
-  return YEAR_MAP[String(v).trim().toLowerCase()] ?? "";
-}
 
 function str(v: unknown): string {
   return v === undefined || v === null ? "" : String(v).trim();
@@ -60,15 +36,6 @@ export async function parseStudents(file: File): Promise<StudentRow[]> {
     const email = str(pick(row, ["email", "email address"]));
     const stream = str(pick(row, ["stream", "department", "dept"]));
     const specialization = str(pick(row, ["specialization", "spec", "branch"]));
-    const pursuingYearRaw = pick(row, ["pursuingyear", "pursuing year", "year"]);
-    
-    // Normalize pursuing year - handle "Fourth Year", "fourth year", etc.
-    let normalizedPursuingYear = normYear(pursuingYearRaw);
-    if (!normalizedPursuingYear && pursuingYearRaw) {
-      const yearStr = String(pursuingYearRaw).trim().toLowerCase().replace(/\s+/g, " ");
-      normalizedPursuingYear = YEAR_MAP[yearStr] ?? "";
-    }
-    
     out.push({
       name,
       regNo,
@@ -76,13 +43,12 @@ export async function parseStudents(file: File): Promise<StudentRow[]> {
       mobileNumber: str(pick(row, ["mobilenumber", "mobile number", "mobile", "phone"])),
       stream,
       specialization,
-      pursuingYear: normalizedPursuingYear,
       hackerRankUsername: str(pick(row, ["hackerrankusername", "hackerrank username", "hackerrank"])),
       linkedInUrl: str(pick(row, ["linkedinurl", "linkedin url", "linkedin"])),
       githubUrl: str(pick(row, ["githuburl", "github url", "github"])),
       leetcodeUrl: str(pick(row, ["leetcodeurl", "leetcode url", "leetcode"])),
       startYear: str(pick(row, ["startyear", "start year"])),
-      endYear: str(pick(row, ["endyear", "end year", "graduation year"])),
+      courseDuration: str(pick(row, ["courseduration", "course duration", "duration"])),
     });
   }
   return out;
@@ -115,13 +81,12 @@ export function downloadStudentTemplate() {
     "mobileNumber",
     "stream",
     "specialization",
-    "pursuingYear",
     "hackerRankUsername",
     "linkedInUrl",
     "githubUrl",
     "leetcodeUrl",
     "startYear",
-    "endYear",
+    "courseDuration",
   ];
   const sample = [
     {
@@ -131,13 +96,12 @@ export function downloadStudentTemplate() {
       mobileNumber: "9876500000",
       stream: "BE",
       specialization: "CSE",
-      pursuingYear: "3rd Year",
       hackerRankUsername: "jane_d",
       linkedInUrl: "https://linkedin.com/in/janedoe",
       githubUrl: "https://github.com/janedoe",
       leetcodeUrl: "https://leetcode.com/janedoe",
       startYear: "2021",
-      endYear: "2025",
+      courseDuration: "4",
     },
   ];
   const ws = XLSX.utils.json_to_sheet(sample, { header: headers });

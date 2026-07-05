@@ -33,7 +33,6 @@ export function Sidebar({
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
         { name: "Students", href: "/students", icon: Users },
         { name: "Assessments", href: "/assessments", icon: FileText },
-        { name: "Marks Entry", href: "/marks", icon: PencilRuler },
         { name: "Staff Management", href: "/staff", icon: Briefcase },
         { name: "User Management", href: "/users", icon: Settings },
       ];
@@ -48,6 +47,8 @@ export function Sidebar({
     } else if (isStudent) {
       return [
         { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+        { name: "Assessments", href: "/assessments", icon: FileText },
+        { name: "My Marks", href: "/marks", icon: PencilRuler },
         { name: "My Profile", href: "/profile", icon: User },
       ];
     }
@@ -58,7 +59,7 @@ export function Sidebar({
 
   const handleLogout = () => {
     logout();
-    router.navigate({ to: "/login" });
+    router.navigate({ to: "/login", replace: true });
   };
 
   return (

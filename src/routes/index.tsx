@@ -1,12 +1,16 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, BookOpen, ShieldCheck, TrendingUp, Users, ChartBar as BarChart3, ArrowRight, CircleCheck as CheckCircle2, Star } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/")({
   component: LandingPage,
 });
 
 function LandingPage() {
+  const { user } = useAuth();
+  const isAuthenticated = !!user;
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -29,16 +33,27 @@ function LandingPage() {
           </nav>
 
           <div className="flex items-center gap-3">
-            <Link to="/login">
-              <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
-                Log in
-              </Button>
-            </Link>
-            <Link to="/signup">
-              <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20">
-                Get Started
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20">
+                  Go to Dashboard
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/login">
+                  <Button variant="ghost" className="text-slate-600 hover:text-slate-900">
+                    Log in
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-lg shadow-blue-500/20">
+                    Get Started
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </header>
@@ -67,17 +82,28 @@ function LandingPage() {
             </p>
 
             <div className="flex flex-wrap items-center gap-4">
-              <Link to="/signup">
-                <Button size="lg" className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-500/25 text-base">
-                  Start for free
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Link to="/login">
-                <Button size="lg" variant="outline" className="h-12 px-8 border-slate-200 text-slate-700 hover:bg-slate-50">
-                  Sign in
-                </Button>
-              </Link>
+              {isAuthenticated ? (
+                <Link to="/dashboard">
+                  <Button size="lg" className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-500/25 text-base">
+                    Go to your Dashboard
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              ) : (
+                <>
+                  <Link to="/signup">
+                    <Button size="lg" className="h-12 px-8 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-xl shadow-blue-500/25 text-base">
+                      Start for free
+                      <ArrowRight className="ml-2 h-5 w-5" />
+                    </Button>
+                  </Link>
+                  <Link to="/login">
+                    <Button size="lg" variant="outline" className="h-12 px-8 border-slate-200 text-slate-700 hover:bg-slate-50">
+                      Sign in
+                    </Button>
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="mt-12 flex items-center gap-8">
@@ -277,17 +303,28 @@ function LandingPage() {
           </p>
 
           <div className="flex items-center justify-center gap-4 flex-wrap">
-            <Link to="/signup">
-              <Button size="lg" className="h-12 px-8 bg-white text-blue-700 hover:bg-blue-50 shadow-xl text-base font-semibold">
-                Get started - it's free
-                <ArrowRight className="ml-2 h-5 w-5" />
-              </Button>
-            </Link>
-            <Link to="/login">
-              <Button size="lg" variant="outline" className="h-12 px-8 border-white/30 text-white hover:bg-white/10 text-base">
-                Sign in
-              </Button>
-            </Link>
+            {isAuthenticated ? (
+              <Link to="/dashboard">
+                <Button size="lg" className="h-12 px-8 bg-white text-blue-700 hover:bg-blue-50 shadow-xl text-base font-semibold">
+                  Go to your Dashboard
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            ) : (
+              <>
+                <Link to="/signup">
+                  <Button size="lg" className="h-12 px-8 bg-white text-blue-700 hover:bg-blue-50 shadow-xl text-base font-semibold">
+                    Get started - it's free
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+                <Link to="/login">
+                  <Button size="lg" variant="outline" className="h-12 px-8 bg-transparent border-white/30 text-white hover:bg-white/10 text-base">
+                    Sign in
+                  </Button>
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </section>

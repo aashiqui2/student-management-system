@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap, Eye, EyeOff, Loader as Loader2, User, Shield, ArrowRight } from "lucide-react";
+import { GraduationCap, Eye, EyeOff, Loader as Loader2, User, Shield, ArrowRight, ChevronLeft } from "lucide-react";
 
 export const Route = createFileRoute("/login")({
   component: Login,
@@ -15,12 +15,18 @@ export const Route = createFileRoute("/login")({
 
 function Login() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState("student");
+
+  useEffect(() => {
+    if (user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,31 +37,28 @@ function Login() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
-      if (!res.ok) throw new Error("Invalid username or password");
+      if (res.status === 403) {
+        const text = await res.text();
+        throw new Error(text || "Account is disabled. Please wait for admin approval.");
+      }
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(text || "Invalid username or password");
+      }
+      
       const data = await res.json();
       login({ username: data.username, token: data.token, role: data.role });
 
       if (data.role === "STUDENT") {
-        const isPendingStaff = data.username?.endsWith("_staff");
-
-        if (activeTab === "staff" && !isPendingStaff) {
+        if (activeTab === "staff") {
           throw new Error("Invalid login: Students must use the Student Portal.");
-        } else if (activeTab === "student" && isPendingStaff) {
-          throw new Error("Invalid login: Staff members must use the Staff / Admin Portal.");
         }
-
-        if (isPendingStaff) {
-          toast.info("Your account is pending admin approval. Please wait.");
-          navigate({ to: "/dashboard" });
-        } else {
-          toast.success("Welcome back!");
-          navigate({ to: "/profile" });
-        }
+        toast.success("Welcome back!");
+        navigate({ to: "/profile" });
       } else {
         if (activeTab === "student") {
           throw new Error("Invalid login: Staff and Admin must use the Staff / Admin Portal.");
         }
-
         toast.success("Welcome back!");
         navigate({ to: "/dashboard" });
       }
@@ -105,7 +108,13 @@ function Login() {
       </div>
 
       {/* Right Side - Login Form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-slate-50 relative">
+        <Link to="/" className="absolute top-6 right-6 sm:top-8 sm:right-8 group">
+          <Button variant="ghost" className="text-slate-500 hover:text-slate-900 flex items-center gap-2">
+            <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span className="hidden sm:inline">Back to Home</span>
+          </Button>
+        </Link>
         <div className="w-full max-w-md">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">

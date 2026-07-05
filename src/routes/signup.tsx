@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { API_BASE } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ShieldAlert, Eye, EyeOff, Loader2, User, Shield, CheckCircle2, XCircle, ArrowRight, GraduationCap } from "lucide-react";
+import { ShieldAlert, Eye, EyeOff, Loader2, User, Shield, CheckCircle2, XCircle, ArrowRight, GraduationCap, ChevronLeft } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 
@@ -17,7 +17,13 @@ export const Route = createFileRoute("/signup")({
 
 function Signup() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
+
+  useEffect(() => {
+    if (user) {
+      navigate({ to: "/dashboard", replace: true });
+    }
+  }, [user, navigate]);
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -30,7 +36,7 @@ function Signup() {
   const [specialization, setSpecialization] = useState("");
   const [stream, setStream] = useState("");
   const [startYear, setStartYear] = useState("");
-  const [endYear, setEndYear] = useState("");
+  const [courseDuration, setCourseDuration] = useState("");
   const [loading, setLoading] = useState(false);
 
   const [activeTab, setActiveTab] = useState(() => {
@@ -166,6 +172,11 @@ function Signup() {
       return;
     }
 
+    if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+      toast.error("Username can only contain letters, numbers, and underscores");
+      return;
+    }
+
     if (password !== confirmPassword) {
       toast.error("Passwords do not match");
       return;
@@ -176,11 +187,10 @@ function Signup() {
     const name = activeTab === "student" ? `${firstName} ${lastName}`.trim() : "";
 
     if (activeTab === "student") {
-      const start = parseInt(startYear);
-      const end = parseInt(endYear);
+      const duration = parseInt(courseDuration);
       const expectedDuration = (stream === "B.Tech." || stream === "B.E.") ? 4 : 3;
-      if (end - start !== expectedDuration) {
-        toast.error(`Invalid End Year. For ${stream}, graduation must be exactly ${expectedDuration} years after Start Year.`);
+      if (duration !== expectedDuration) {
+        toast.error(`Invalid Course Duration. For ${stream}, the course must be exactly ${expectedDuration} years.`);
         setLoading(false);
         return;
       }
@@ -194,7 +204,7 @@ function Signup() {
           username,
           password,
           roleType: activeTab,
-          ...(activeTab === "student" ? { name, email, department, stream, specialization, startYear: parseInt(startYear), endYear: parseInt(endYear) } : {})
+          ...(activeTab === "student" ? { name, email, department, stream, specialization, startYear: parseInt(startYear), courseDuration: parseInt(courseDuration) } : {})
         }),
       });
       if (!res.ok) {
@@ -279,7 +289,13 @@ function Signup() {
       </div>
 
       {/* Right Side - Signup Form */}
-      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12 bg-slate-50 relative">
+        <Link to="/" className="absolute top-6 right-6 sm:top-8 sm:right-8 group">
+          <Button variant="ghost" className="text-slate-500 hover:text-slate-900 flex items-center gap-2">
+            <ChevronLeft className="h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            <span className="hidden sm:inline">Back to Home</span>
+          </Button>
+        </Link>
         <div className="w-full max-w-lg">
           {/* Mobile Logo */}
           <div className="lg:hidden flex items-center justify-center gap-2 mb-8">
@@ -337,9 +353,12 @@ function Signup() {
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       required
-                      className="h-11 bg-slate-50 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 transition-all"
-                      placeholder={activeTab === "student" ? "e.g. 2022CS01" : "e.g. jsmith_staff"}
+                      className="h-11 bg-slate-50 border-slate-200"
+                      placeholder={activeTab === "student" ? "e.g. 2022CS01" : "e.g. jsmith"}
                     />
+                    {username && !/^[a-zA-Z0-9_]+$/.test(username) && (
+                      <p className="text-red-500 text-xs mt-1">Username can only contain letters, numbers, and underscores</p>
+                    )}
                   </div>
 
                   {activeTab === "student" && (
@@ -430,14 +449,14 @@ function Signup() {
                           </Select>
                         </div>
                         <div className="space-y-2">
-                          <Label htmlFor="endYear" className="text-sm font-medium text-slate-700">End Year</Label>
-                          <Select value={endYear} onValueChange={setEndYear} required>
-                            <SelectTrigger id="endYear" className="h-11 bg-slate-50 border-slate-200">
+                          <Label htmlFor="courseDuration" className="text-sm font-medium text-slate-700">Course Duration (Years)</Label>
+                          <Select value={courseDuration} onValueChange={setCourseDuration} required>
+                            <SelectTrigger id="courseDuration" className="h-11 bg-slate-50 border-slate-200">
                               <SelectValue placeholder="Select" />
                             </SelectTrigger>
                             <SelectContent>
-                              {Array.from({ length: 13 }, (_, i) => String(2018 + i)).map(year => (
-                                <SelectItem key={year} value={year}>{year}</SelectItem>
+                              {[1, 2, 3, 4, 5].map(year => (
+                                <SelectItem key={year} value={String(year)}>{year} {year === 1 ? 'Year' : 'Years'}</SelectItem>
                               ))}
                             </SelectContent>
                           </Select>

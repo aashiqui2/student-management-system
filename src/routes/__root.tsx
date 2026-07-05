@@ -130,7 +130,7 @@ function RootComponent() {
       <AuthProvider>
         <SMSProvider>
           <AppLayout />
-          <Toaster richColors position="top-right" />
+          <Toaster richColors position="top-right" closeButton />
         </SMSProvider>
       </AuthProvider>
     </QueryClientProvider>
@@ -146,7 +146,7 @@ function AppLayout() {
 
   useEffect(() => {
     if (!isPublic && !user) {
-      router.navigate({ to: "/login" });
+      router.navigate({ to: "/login", replace: true });
     }
   }, [isPublic, user, router]);
 

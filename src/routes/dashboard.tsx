@@ -26,6 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CategoryBadge } from "@/components/sms/CategoryBadge";
 import { EmptyState } from "@/components/sms/EmptyState";
+import { StudentDashboardView } from "@/components/sms/StudentDashboardView";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,11 +64,7 @@ function Dashboard() {
   const [filter, setFilter] = useState<Filter>("All");
   const [staffStats, setStaffStats] = useState({ total: 0, pending: 0 });
 
-  useEffect(() => {
-    if (isStudent && !isPendingStaff) {
-      navigate({ to: "/profile" });
-    }
-  }, [isStudent, isPendingStaff, navigate]);
+
 
   useEffect(() => {
     if (isAdmin) {
@@ -81,8 +78,8 @@ function Dashboard() {
           return [];
         })
         .then((data: any[]) => {
-          const staffCount = data.filter((u) => u.role === "STAFF").length;
-          const pendingCount = data.filter((u) => u.role === "STUDENT" && u.username.endsWith("_staff")).length;
+          const staffCount = data.filter((u) => u.role === "STAFF" && u.enabled).length;
+          const pendingCount = data.filter((u) => u.role === "STAFF" && !u.enabled).length;
           setStaffStats({ total: staffCount, pending: pendingCount });
         })
         .catch(console.error);
@@ -173,6 +170,14 @@ function Dashboard() {
   }
 
   const filters: Filter[] = ["All", "Level 1", "Level 2", "Level 3"];
+
+  if (isStudent) {
+    return (
+      <div className="mx-auto max-w-7xl">
+        <StudentDashboardView />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
@@ -275,13 +280,12 @@ function Dashboard() {
             </div>
 
             {filtered.length > 0 ? (
-              <div className="overflow-x-auto max-h-[450px]">
+              <div className="overflow-auto max-h-[450px]">
                 <table className="w-full text-sm">
-                  <thead className="sticky top-0 bg-slate-50/95 backdrop-blur-sm">
+                  <thead className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur-sm">
                     <tr className="border-b border-slate-100 text-left text-slate-600">
                       <th className="px-6 py-4 font-semibold">Student</th>
-                      <th className="px-6 py-4 font-semibold">Stream</th>
-                      <th className="px-6 py-4 font-semibold">Specialization</th>
+                      <th className="px-6 py-4 font-semibold">Department</th>
                       <th className="px-6 py-4 font-semibold">Reg No</th>
                       <th className="px-6 py-4 font-semibold">Performance</th>
                       <th className="px-6 py-4 text-center font-semibold">Category</th>
@@ -314,12 +318,7 @@ function Dashboard() {
                         </td>
                         <td className="px-6 py-4">
                           <Badge variant="outline" className="font-medium border-slate-200 bg-slate-50">
-                            {s.stream || "N/A"}
-                          </Badge>
-                        </td>
-                        <td className="px-6 py-4">
-                          <Badge variant="outline" className="font-medium border-slate-200 bg-slate-50">
-                            {s.specialization || "N/A"}
+                            {s.specialization || s.department || "N/A"}
                           </Badge>
                         </td>
                         <td className="px-6 py-4">

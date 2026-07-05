@@ -94,6 +94,7 @@ function AssessmentList() {
                     <th className="px-5 py-3 font-semibold">Assessment Name</th>
                     <th className="px-5 py-3 font-semibold">Date Conducted</th>
                     <th className="px-5 py-3 font-semibold">Total Marks</th>
+                    <th className="px-5 py-3 font-semibold">Created By</th>
                     <th className="px-5 py-3 font-semibold">Resources</th>
                     {(isAdmin || isStaff) && <th className="px-5 py-3 text-center font-semibold">Actions</th>}
                   </tr>
@@ -121,6 +122,9 @@ function AssessmentList() {
                       </td>
                       <td className="px-5 py-3">
                         <Badge variant="secondary">{a.totalMarks}</Badge>
+                      </td>
+                      <td className="px-5 py-3 text-muted-foreground">
+                        {a.createdBy || "—"}
                       </td>
                       <td className="px-5 py-3">
                         {a.resources && a.resources.length > 0 ? (

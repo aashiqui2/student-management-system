@@ -19,7 +19,7 @@ type FormValues = {
   totalMarks: number;
 };
 
-const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.sql,.txt";
+const ACCEPTED = ".pdf,.doc,.docx,.xls,.xlsx,.csv,.sql,.txt,.png,.jpg,.jpeg,.gif";
 
 export function AssessmentForm({ id }: { id?: string }) {
   const navigate = useNavigate();
@@ -33,6 +33,7 @@ export function AssessmentForm({ id }: { id?: string }) {
   const {
     register,
     handleSubmit,
+    setError,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: existing
@@ -73,11 +74,15 @@ export function AssessmentForm({ id }: { id?: string }) {
       }
       navigate({ to: "/assessments" });
     } catch (error) {
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Failed to save assessment. Please try again.",
-      );
+      if (error instanceof Error && error.message.toLowerCase().includes("already exists")) {
+        setError("assessmentName", { type: "manual", message: "Assessment name already exists. Please choose a new name." });
+      } else {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Failed to save assessment. Please try again.",
+        );
+      }
     }
   };
 
@@ -161,7 +166,7 @@ export function AssessmentForm({ id }: { id?: string }) {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Attach question papers in PDF, Word, Excel, or SQL files.
+                Attach question papers in PDF, Word, Excel, SQL, or Image files.
               </p>
               {resources.length > 0 ? (
                 <div className="space-y-2">

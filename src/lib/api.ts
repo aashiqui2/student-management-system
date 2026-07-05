@@ -55,10 +55,11 @@ export interface UserDto {
   stream: string;
   department: string;
   specialization: string;
-  pursuingYear?: string | null;
+  pursuingYearLabel?: string | null;
   hackerRankUsername?: string;
   startYear?: number | null;
-  endYear?: number | null;
+  courseDuration?: number | null;
+  graduationYear?: number | null;
   linkedInUrl?: string;
 }
 
@@ -71,10 +72,11 @@ export type StudentApi = {
   department?: string;
   stream?: string;
   specialization?: string;
-  pursuingYear?: string | null;
+  pursuingYearLabel?: string | null;
   hackerRankUsername?: string;
   startYear?: number | null;
-  endYear?: number | null;
+  courseDuration?: number | null;
+  graduationYear?: number | null;
   linkedInUrl?: string;
   githubUrl?: string;
   leetcodeUrl?: string;
@@ -93,6 +95,7 @@ export type AssessmentApi = {
   assessmentName: string;
   dateConducted: string;
   totalMarks: number;
+  createdBy?: string;
   resources?: AssessmentResourceApi[];
 };
 
@@ -105,18 +108,17 @@ export type StudentAssessmentMarkApi = {
 
 export type StudentCreatePayload = Omit<
   StudentApi,
-  "id" | "profilePicUrl" | "pursuingYear" | "startYear" | "endYear"
+  "id" | "profilePicUrl" | "pursuingYearLabel" | "startYear" | "courseDuration" | "graduationYear"
 > & {
-  pursuingYear?: string | null;
   startYear?: number | null;
-  endYear?: number | null;
+  courseDuration?: number | null;
 };
 
 export type AssessmentCreatePayload = Omit<AssessmentApi, "id" | "resources">;
 
 export type DesignationApi = {
   id: number;
-  designationName: string;
+  name: string;
 };
 
 export type ChangePasswordPayload = {
@@ -136,6 +138,7 @@ export type StaffProfileApi = {
   profilePhotoUrl?: string;
   designation?: DesignationApi;
   user?: { id: number; username: string; role: string; enabled: boolean };
+  username?: string;
   employeeId?: string;
   gender?: string;
   dateOfBirth?: string;
